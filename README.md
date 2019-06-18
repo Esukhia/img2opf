@@ -8,7 +8,7 @@ virtualenv .env
 source .env/bin/activate
 pip install -r requriments.txt
 ```
-Follow this [Quick Start](https://pypi.org/project/google-cloud-vision/) guide to setup Google Vision API, which is necessary for using Google OCR service.
+Follow this [Quick Start](https://pypi.org/project/google-cloud-vision/) guide to setup Google Vision API, which is necessary for using Google OCR service. There is also [video tutorial](https://www.youtube.com/watch?v=nMY0qDg16y4)
 
 
 ### Usage
