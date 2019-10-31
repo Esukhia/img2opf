@@ -10,13 +10,22 @@ from google.protobuf.json_format import MessageToJson
 
 vision_client = vision.ImageAnnotatorClient()
 
-def get_text_from_image(fn):
-    with io.open(fn, 'rb') as image_file:
-        content = image_file.read()
-        image = types.Image(content=content)
+def get_text_from_image(image):
+    '''
+    image: file_path or image bytes
+    return: google ocr response in Json
+    '''
+    if isinstance(image, str):
+        with io.open(image, 'rb') as image_file:
+            content = image_file.read()
+    else:
+        content = image
+    image = types.Image(content=content)
 
     response = vision_client.document_text_detection(image=image)
-    json_response = MessageToJson(response)
+    response_json = MessageToJson(response)
+
+    return response_json
 
 
 if __name__ == "__main__":
