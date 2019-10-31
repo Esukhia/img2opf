@@ -5,22 +5,18 @@ import os
 
 from google.cloud import vision
 from google.cloud.vision import types
+from google.protobuf.json_format import MessageToJson
 
 
 vision_client = vision.ImageAnnotatorClient()
 
-def text_annotations(fn):
+def get_text_from_image(fn):
     with io.open(fn, 'rb') as image_file:
         content = image_file.read()
         image = types.Image(content=content)
 
     response = vision_client.document_text_detection(image=image)
-    texts = response.text_annotations
-
-    try:
-        return texts[0].description
-    except:
-        return ""
+    json_response = MessageToJson(response)
 
 
 if __name__ == "__main__":
@@ -42,7 +38,8 @@ if __name__ == "__main__":
 
     vol_texts = []
     for fn in tqdm(fns[args.n-1:]):
-        vol_texts.append(text_annotations(fn))
+        text = get_text_from_image(fn)
+        vol_texts.append(text[0].description)
     
     output_fn = os.path.join(output_dir, 'ocr_output.txt')
     with open(output_fn, 'w') as f:
