@@ -3,5 +3,6 @@
 dev/
 **/data/
 **/tsv
+**/output/
 **/__pycache__/
 *.egg-info/

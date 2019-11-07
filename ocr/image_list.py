@@ -83,37 +83,37 @@ def get_iiif_fullimg_for_filename(volumeId, filename):
 
 def shorten(id):
 	return id[29:]
-
-# getting volumes for W4CZ5369, W23703, W1KG13126, W1GS66030 and W22704
-outdir = "tsv/"
-if not os.path.exists(outdir):
-    os.makedirs(outdir)
-worksIds = [
-	URIRef("http://purl.bdrc.io/resource/W4CZ5369"),
-	URIRef("http://purl.bdrc.io/resource/W23703"),
-	URIRef("http://purl.bdrc.io/resource/W1KG13126"),
-	URIRef("http://purl.bdrc.io/resource/W1GS66030"),
-	URIRef("http://purl.bdrc.io/resource/W22704")
-]
-for workId in worksIds:
-	volseqnum = 0
-	csvfile = open('tsv/%s-1.tsv' % (shorten(workId)), 'w', newline='')
-	csvwriter = csv.writer(csvfile, delimiter='\t',quoting=csv.QUOTE_MINIMAL)
-	csvwriter.writerow(["volumeId", "imgSeq", "imgUrl"])
-	for volinfo in get_volumes_for_work(workId):
-		volseqnum += 1
-		volnum = int(volinfo["volnum"])
-		if volseqnum >= 10:
-			volseqnum = 1
-			csvfile.close()
-			csvfile = open('tsv/%s-%d.tsv' % (shorten(workId), volnum), 'w', newline='')
-			csvwriter = csv.writer(csvfile, delimiter='\t',quoting=csv.QUOTE_MINIMAL)
-			csvwriter.writerow(["volumeId", "imgSeq", "imgUrl"])
-		imgseq = 0
-		volumeId = volinfo["volumeId"]
-		for imginfo in get_simple_imagelist_for_vol(volumeId):
-			imgseq += 1
-			if imgseq < 3:
-				continue
-			csvwriter.writerow([shorten(volumeId), imgseq, get_iiif_fullimg_for_filename(volumeId, imginfo["filename"])])
-	csvfile.close()
+if __name__ == "__main__":
+	# getting volumes for W4CZ5369, W23703, W1KG13126, W1GS66030 and W22704
+	outdir = "tsv/"
+	if not os.path.exists(outdir):
+		os.makedirs(outdir)
+	worksIds = [
+		URIRef("http://purl.bdrc.io/resource/W4CZ5369"),
+		URIRef("http://purl.bdrc.io/resource/W23703"),
+		URIRef("http://purl.bdrc.io/resource/W1KG13126"),
+		URIRef("http://purl.bdrc.io/resource/W1GS66030"),
+		URIRef("http://purl.bdrc.io/resource/W22704")
+	]
+	for workId in worksIds:
+		volseqnum = 0
+		csvfile = open('tsv/%s-1.tsv' % (shorten(workId)), 'w', newline='')
+		csvwriter = csv.writer(csvfile, delimiter='\t',quoting=csv.QUOTE_MINIMAL)
+		csvwriter.writerow(["volumeId", "imgSeq", "imgUrl"])
+		for volinfo in get_volumes_for_work(workId):
+			volseqnum += 1
+			volnum = int(volinfo["volnum"])
+			if volseqnum >= 10:
+				volseqnum = 1
+				csvfile.close()
+				csvfile = open('tsv/%s-%d.tsv' % (shorten(workId), volnum), 'w', newline='')
+				csvwriter = csv.writer(csvfile, delimiter='\t',quoting=csv.QUOTE_MINIMAL)
+				csvwriter.writerow(["volumeId", "imgSeq", "imgUrl"])
+			imgseq = 0
+			volumeId = volinfo["volumeId"]
+			for imginfo in get_simple_imagelist_for_vol(volumeId):
+				imgseq += 1
+				if imgseq < 3:
+					continue
+				csvwriter.writerow([shorten(volumeId), imgseq, get_iiif_fullimg_for_filename(volumeId, imginfo["filename"])])
+		csvfile.close()
