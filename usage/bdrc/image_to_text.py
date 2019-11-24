@@ -51,7 +51,11 @@ def run_ocr(vol_id, img_info):
 
 
 if __name__ == "__main__":
-    input_path = Path('usage/bdrc/test')
+
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--input', '-i', help='path to workids file')
+    
+    input_path = Path(parser.input)
     output_path = Path('usage/bdrc/output')
     output_path.mkdir(exist_ok=True)
 
