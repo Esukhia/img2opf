@@ -8,7 +8,7 @@ import requests
 
 from rdflib import URIRef
 from tqdm import tqdm
-import slack
+# import slack
 
 from ocr.google_ocr import get_text_from_image
 from ocr.image_list import get_volumes_for_work
@@ -54,8 +54,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--input', '-i', help='path to workids file')
-    
-    input_path = Path(parser.input)
+    args = parser.parse_args()
+
+    input_path = Path(args.input)
     output_path = Path('./output')
     output_path.mkdir(exist_ok=True)
 
