@@ -42,7 +42,7 @@ def get_work_ids(fn):
 
 def run_ocr(vol_id, img_info):
     img_url = get_iiif_fullimg_for_filename(vol_id, img_info["filename"])
-    print(img_url)
+    # print(img_url)
     img = get_image(img_url)
     response_json = get_text_from_image(img)
     response_dict = eval(response_json)
