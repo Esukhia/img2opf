@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     for workid_path in input_path.iterdir():
         # go through all the URIRef workids 
-        for work_id, work_uri in get_work_ids(workid_path):
+        for work_id, work_uri in tqdm(get_work_ids(workid_path)):
 
             print(f'[INfo] Work {work_id} processing ....')
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
             work_dir = output_path/work_id
             work_dir.mkdir(exist_ok=True)
             # get all the volumes for the work
-            for vol_info in get_volumes_for_work(work_uri)[:1]:
+            for vol_info in tqdm(get_volumes_for_work(work_uri)):
                 vol_id = vol_info["volumeId"]
                 print(f'[INfo] volume {shorten(vol_id)} processing ....')
 
@@ -84,7 +84,7 @@ if __name__ == "__main__":
                     with ProcessPoolExecutor() as executor:
                         responses = executor.map(
                             vol_run_ocr,
-                            get_simple_imagelist_for_vol(vol_id)[:2]
+                            get_simple_imagelist_for_vol(vol_id)
                         )
                 except:
                     slack_notifier(f'Failed at {work_id}:{vol_id}')
