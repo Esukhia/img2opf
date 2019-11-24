@@ -56,7 +56,7 @@ if __name__ == "__main__":
     parser.add_argument('--input', '-i', help='path to workids file')
     
     input_path = Path(parser.input)
-    output_path = Path('usage/bdrc/output')
+    output_path = Path('./output')
     output_path.mkdir(exist_ok=True)
 
     # slack_notifier('Google OCR is running...')
