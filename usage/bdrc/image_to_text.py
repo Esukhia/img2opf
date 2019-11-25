@@ -61,7 +61,7 @@ def run_ocr(vol_id, img_info):
     img_num = get_img_num(img_url)
     
     # check if img is ocred
-    if is_img_ocred(img_url): return
+    if is_img_ocred(img_num): return
     
     img = get_image(img_url)
     response_json = get_text_from_image(img)
