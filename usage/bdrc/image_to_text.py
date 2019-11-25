@@ -39,10 +39,11 @@ def get_work_ids(fn):
         if not work_id: continue
         yield work_id, URIRef(f'http://purl.bdrc.io/resource/{work_id}')
 
+
 def is_img_ocred_general(path, img_num):
     json_output_fn_old = path/f'{img_num:03}.json'
     json_output_fn_new = path/f'{img_num:04}.json'
-    return json_output_fn.is_file() or 
+    return json_output_fn_new.is_file() or json_output_fn_old.is_file()
 
 
 def get_img_num(url):
@@ -103,8 +104,7 @@ if __name__ == "__main__":
 
                 # check if vol is ocred
                 vol_resource = vol_dir/'resources'
-                if vol_resource.exists(): continue
-                vol_resource.mkdir()
+                vol_resource.mkdir(exist_ok=True)
 
                 is_img_ocred = is_img_ocred_general(vol_resource)
 
