@@ -39,22 +39,34 @@ def get_work_ids(fn):
         if not work_id: continue
         yield work_id, URIRef(f'http://purl.bdrc.io/resource/{work_id}')
 
+def is_img_ocred_general(path, img_num):
+    json_output_fn_old = path/f'{img_num:03}.json'
+    json_output_fn_new = path/f'{img_num:04}.json'
+    return json_output_fn.is_file() or 
+
 
 def get_img_num(url):
     url_part = url.split('::')[1]
     img_num_sep = '<none>'
     if '.tif' in url_part: img_num_sep = '.tif'
     elif '.JPG' in url_part: img_num_sep = '.JPG'
-    return url_part.split(img_num_sep)[0]
+    img_id = url_part.split(img_num_sep)[0]
+    img_num = int(img_id[-4:])
+    return img_num
 
 
 def run_ocr(vol_id, img_info):
     img_url = get_iiif_fullimg_for_filename(vol_id, img_info["filename"])
+    img_num = get_img_num(img_url)
+    
+    # check if img is ocred
+    if is_img_ocred(img_url): return
+    
     img = get_image(img_url)
     response_json = get_text_from_image(img)
     response_dict = eval(response_json)
     response_dict['image_link'] = img_url
-    print(f'[INfo] Volume {shorten(vol_id)} -> image: {get_img_num(img_url)} ... completed')
+    print(f'[INfo] Volume {shorten(vol_id)} -> image: {} ... completed')
     return response_dict
 
 
@@ -67,6 +79,8 @@ if __name__ == "__main__":
     input_path = Path(args.input)
     output_path = Path('./output')
     output_path.mkdir(exist_ok=True)
+
+
 
     # slack_notifier('Google OCR is running...')
 
@@ -90,7 +104,9 @@ if __name__ == "__main__":
                 # check if vol is ocred
                 vol_resource = vol_dir/'resources'
                 if vol_resource.exists(): continue
-                vol_resource.mkdir(exist_ok=True)
+                vol_resource.mkdir()
+
+                is_img_ocred = is_img_ocred_general(vol_resource)
 
                 vol_run_ocr = partial(run_ocr, vol_id)
                 try:
@@ -113,7 +129,7 @@ if __name__ == "__main__":
                     # text += page_text + PAGE_BREAK
 
                     # save each page ocr json reponse separately
-                    page_path_json = vol_resource/f'{i+1:03}.json'
+                    page_path_json = vol_resource/f'{i+1:04}.json'
                     json.dump(res, page_path_json.open('w'))
 
     # slack_notifier('Google OCR has completed !')
