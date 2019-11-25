@@ -67,7 +67,7 @@ def run_ocr(vol_id, img_info):
     response_json = get_text_from_image(img)
     response_dict = eval(response_json)
     response_dict['image_link'] = img_url
-    print(f'[INfo] Volume {shorten(vol_id)} -> image: {} ... completed')
+    print(f'[INfo] Volume {shorten(vol_id)} -> image: {img_num} ... completed')
     return response_dict
 
 
