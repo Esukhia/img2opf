@@ -106,7 +106,7 @@ if __name__ == "__main__":
                 vol_resource = vol_dir/'resources'
                 vol_resource.mkdir(exist_ok=True)
 
-                is_img_ocred = is_img_ocred_general(vol_resource)
+                is_img_ocred = partial(is_img_ocred_general, vol_resource)
 
                 vol_run_ocr = partial(run_ocr, vol_id)
                 try:
