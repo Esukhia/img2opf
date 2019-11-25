@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     for workid_path in input_path.iterdir():
         # go through all the URIRef workids 
-        for work_id, work_uri in get_work_ids(workid_path)
+        for work_id, work_uri in get_work_ids(workid_path):
 
             print(f'[INfo] Work {work_id} processing ....')
 
