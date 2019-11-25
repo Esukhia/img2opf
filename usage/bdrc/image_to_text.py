@@ -17,7 +17,7 @@ from ocr.image_list import get_iiif_fullimg_for_filename
 from ocr.image_list import shorten
 
 
-PAGE_BREAK = '\n' + '#'*100 + '\n'
+# PAGE_BREAK = '\n' + '#'*100 + '\n'
 
 # client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'])
 
@@ -40,13 +40,21 @@ def get_work_ids(fn):
         yield work_id, URIRef(f'http://purl.bdrc.io/resource/{work_id}')
 
 
+def get_img_num(url):
+    url_part = url.split('::')[1]
+    img_num_sep = '<none>'
+    if '.tif' in url_part: img_num_sep = '.tif'
+    elif '.JPG' in url_part: img_num_sep = '.JPG'
+    return url_part.split(img_num_sep)[0]
+
+
 def run_ocr(vol_id, img_info):
     img_url = get_iiif_fullimg_for_filename(vol_id, img_info["filename"])
-    print(img_url)
     img = get_image(img_url)
     response_json = get_text_from_image(img)
     response_dict = eval(response_json)
     response_dict['image_link'] = img_url
+    print(print(f'[INfo] Volume {shorten(vol_id)} -> image: {get_img_num(img_url)} ... completed'))
     return response_dict
 
 
@@ -64,7 +72,7 @@ if __name__ == "__main__":
 
     for workid_path in input_path.iterdir():
         # go through all the URIRef workids 
-        for work_id, work_uri in tqdm(get_work_ids(workid_path)):
+        for work_id, work_uri in get_work_ids(workid_path)
 
             print(f'[INfo] Work {work_id} processing ....')
 
@@ -72,12 +80,17 @@ if __name__ == "__main__":
             work_dir = output_path/work_id
             work_dir.mkdir(exist_ok=True)
             # get all the volumes for the work
-            for vol_info in tqdm(get_volumes_for_work(work_uri)):
+            for vol_info in get_volumes_for_work(work_uri):
                 vol_id = vol_info["volumeId"]
                 print(f'[INfo] volume {shorten(vol_id)} processing ....')
 
                 vol_dir = work_dir/shorten(vol_id)
                 vol_dir.mkdir(exist_ok=True)
+
+                # check if vol is ocred
+                vol_resource = vol_dir/'resources'
+                if vol_resource.exists(): continue
+                vol_resource.mkdir(exist_ok=True)
 
                 vol_run_ocr = partial(run_ocr, vol_id)
                 try:
@@ -89,12 +102,10 @@ if __name__ == "__main__":
                         )
                 except:
                     slack_notifier(f'Failed at {work_id}:{vol_id}')
-                print(f'[INFO] {shorten(vol_id)} is completed !')
+                print(f'[INFO] Volume {shorten(vol_id)} is completed !')
 
                 # text = ''
                 # vol_text_fn = vol_dir/'base.txt'
-                vol_resource = vol_dir/'resources'
-                vol_resource.mkdir(exist_ok=True)
                 for i, res in enumerate(responses):
                     # accumulate all the page text
                     if not res: continue # blank page response is empty
