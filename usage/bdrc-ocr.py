@@ -1,6 +1,15 @@
+import requests
+import rdflib
+from rdflib import URIRef, Literal
+from rdflib.namespace import Namespace, NamespaceManager
 
 ARCHIVE_BUCKET = "archive.tbrc.org"
 OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
+
+BDR = Namespace("http://purl.bdrc.io/resource/")
+NSM = NamespaceManager(rdflib.Graph())
+NSM.bind("bdr", BDR)
+
 
 def get_s3_image_list(volume_prefix_url):
 	"""
@@ -21,7 +30,19 @@ def get_volume_infos(work_prefix_url):
 	  ...
 	]
 	"""
-	return
+	r = requests.get(f'http://purl.bdrc.io/query/table/volumesForWork?R_RES={work_prefix_url}&format=json&pageSize=400')
+	if r.status_code != 200:
+		print("error %d when fetching volumes for %s" %(r.status_code, qname))
+		return
+	# the result of the query is already in ascending volume order
+	res = r.json()
+	for b in res["results"]["bindings"]:
+		volume_prefix_url = NSM.qname(URIRef(b["volid"]["value"]))
+		yield {
+			"vol_num": b["volnum"]["value"], 
+			"volume_prefix_url": volume_prefix_url,
+			"imagegroup": volume_prefix_url.split('_')[-1]
+			}
 
 def get_s3_prefix_path(work_local_id, imagegroup):
 	"""
@@ -76,3 +97,9 @@ def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup):
 	This function uploads the images on s3, according to the schema set up by BDRC, see documentation
 	"""
 	return
+
+
+if __name__ == "__main__":
+	work_prefix_url = 'bdr:W4CZ5369'
+	for vol_info in get_volume_infos(work_prefix_url):
+		print(vol_info)
