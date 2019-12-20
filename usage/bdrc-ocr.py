@@ -16,7 +16,12 @@ def get_s3_image_list(volume_prefix_url):
 	returns the content of the dimension.json file for a volume ID, accessible at:
 	https://iiifpres.bdrc.io/il/v:bdr:V22084_I0888 for volume ID bdr:V22084_I0888
 	"""
-	return
+	r = requests.get(f'https://iiifpres.bdrc.io/il/v:{volume_prefix_url}')
+	if r.status_code != 200:
+		print("error "+r.status_code+" when fetching volumes for "+qname)
+		return
+	return r.json()
+
 
 def get_volume_infos(work_prefix_url):
 	"""
@@ -43,6 +48,7 @@ def get_volume_infos(work_prefix_url):
 			"volume_prefix_url": volume_prefix_url,
 			"imagegroup": volume_prefix_url.split('_')[-1]
 			}
+
 
 def get_s3_prefix_path(work_local_id, imagegroup):
 	"""
@@ -102,4 +108,5 @@ def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup):
 if __name__ == "__main__":
 	work_prefix_url = 'bdr:W4CZ5369'
 	for vol_info in get_volume_infos(work_prefix_url):
-		print(vol_info)
+		for img_info in get_s3_image_list(vol_info['volume_prefix_url']):
+			print(img_info)
