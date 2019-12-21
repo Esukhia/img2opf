@@ -11,6 +11,13 @@ NSM = NamespaceManager(rdflib.Graph())
 NSM.bind("bdr", BDR)
 
 
+def get_value(json_node):
+	if json_node['type'] == 'literal':
+		return json_node['value']
+	else:
+		return NSM.qname(URIRef(json_node["value"]))
+
+
 def get_s3_image_list(volume_prefix_url):
 	"""
 	returns the content of the dimension.json file for a volume ID, accessible at:
@@ -44,9 +51,9 @@ def get_volume_infos(work_prefix_url):
 	for b in res["results"]["bindings"]:
 		volume_prefix_url = NSM.qname(URIRef(b["volid"]["value"]))
 		yield {
-			"vol_num": b["volnum"]["value"], 
-			"volume_prefix_url": volume_prefix_url,
-			"imagegroup": volume_prefix_url.split('_')[-1]
+			"vol_num": get_value(b["volnum"]), 
+			"volume_prefix_url": get_value(b["volid"]),
+			"imagegroup": get_value(b["imggroup"])
 			}
 
 
