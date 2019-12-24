@@ -1,14 +1,30 @@
+import io
+import os
+import hashlib
+from pathlib import Path
+
+import boto3
+import botocore
+from PIL import Image
 import requests
 import rdflib
 from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, NamespaceManager
 
+
 ARCHIVE_BUCKET = "archive.tbrc.org"
 OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
+
+os.environ['AWS_SHARED_CREDENTIALS_FILE'] = "~/.aws/credentials"
 
 BDR = Namespace("http://purl.bdrc.io/resource/")
 NSM = NamespaceManager(rdflib.Graph())
 NSM.bind("bdr", BDR)
+
+
+def get_s3_bucket(bucket_name):
+	s3 = boto3.resource('s3')
+	return s3.Bucket(bucket_name)
 
 
 def get_value(json_node):
@@ -64,22 +80,47 @@ def get_s3_prefix_path(work_local_id, imagegroup):
 	https://github.com/buda-base/volume-manifest-tool/blob/f8b495d908b8de66ef78665f1375f9fed13f6b9c/manifestforwork.py#L94
 	which is documented
 	"""
-	return
+	md5 = hashlib.md5(str.encode(work_local_id))
+	two = md5.hexdigest()[:2]
 
-def get_s3_bits(s3path):
+	pre, rest = imagegroup[0], imagegroup[1:]
+	if pre == 'I' and rest.isdigit() and len(rest) == 4:
+		suffix = rest
+	else:
+		suffix = imagegroup
+	
+	return f'Works/{two}/{work_local_id}/images/{work_local_id}-{suffix}'
+
+def get_s3_bits(s3path, bucket):
 	"""
 	get the s3 binary data in memory
 	"""
+	f = io.BytesIO()
+	try:
+		bucket.download_fileobj(s3path, f)
+		return f
+	except botocore.exceptions.ClientError as e:
+		if e.response['Error']['Code'] == '404':
+			print('The object does not exist.')
+		else:
+			raise
 	return
 
-def save_file(bits, origfilename, ):
+def save_file(bits, origfilename, imagegroup_output_dir):
 	"""
 	uses pillow to interpret the bits as an image and save as a format
 	that is appropriate for Google Vision (png instead of tiff for instance).
 	This may also apply some automatic treatment
 	"""
+	imagegroup_output_dir.mkdir(exist_ok=True, parents=True)
+	output_fn = imagegroup_output_dir/origfilename
+	if origfilename.endswith('.tif'):
+		img = Image.open(bits)
+		output_fn.write_bytes(img)
+	else:
+		output_fn.write_bytes(bits.getbuffer())
 
-def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_base_dir):
+def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_base_dir, bucket):
 	"""
 	this function gets the list of images of a volume and download all the images from s3.
 	The output directory is output_base_dir/work_local_id/imagegroup
@@ -87,10 +128,10 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
 	imagelist = get_s3_image_list(volume_prefix_url)
 	s3prefix = get_s3_prefix_path(work_local_id, imagegroup)
 	for imageinfo in imagelist:
-		s3path = s3prefix+"/"+imageinfo.filename
-		filebits = get_s3_bits(s3path)
+		s3path = s3prefix+"/"+imageinfo['filename']
+		filebits = get_s3_bits(s3path, bucket)
 		imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
-		save_file(filebits, imageinfo.filename, imagegroup_output_dir)
+		save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
 
 def apply_ocr_on_folder(imagesfolder, work_local_id, imagegroup, ocr_base_dir):
 	"""
@@ -113,7 +154,16 @@ def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup):
 
 
 if __name__ == "__main__":
-	work_prefix_url = 'bdr:W4CZ5369'
-	for vol_info in get_volume_infos(work_prefix_url):
-		for img_info in get_s3_image_list(vol_info['volume_prefix_url']):
-			print(img_info)
+	archive_bucket = get_s3_bucket(ARCHIVE_BUCKET)
+	ocr_output_bucket = get_s3_bucket(OCR_OUTPUT_BUCKET)
+
+	work = 'bdr:W4CZ5369'
+	for vol_info in get_volume_infos(work):
+		work_local_id = work.split(':')[-1] if ':' in work else work
+		save_images_for_vol(
+			volume_prefix_url=vol_info['volume_prefix_url'],
+			work_local_id=work_local_id, 
+			imagegroup=vol_info['imagegroup'],
+			images_base_dir=Path('./'),
+			bucket=archive_bucket
+		)
