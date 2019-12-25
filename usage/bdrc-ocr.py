@@ -5,26 +5,23 @@ from pathlib import Path
 
 import boto3
 import botocore
-from PIL import Image
 import requests
 import rdflib
 from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, NamespaceManager
 
+from ocr.google_ocr import get_text_from_image
 
+
+# S3 config
+os.environ['AWS_SHARED_CREDENTIALS_FILE'] = "~/.aws/credentials"
 ARCHIVE_BUCKET = "archive.tbrc.org"
 OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
 
-os.environ['AWS_SHARED_CREDENTIALS_FILE'] = "~/.aws/credentials"
-
+# URI config
 BDR = Namespace("http://purl.bdrc.io/resource/")
 NSM = NamespaceManager(rdflib.Graph())
 NSM.bind("bdr", BDR)
-
-
-def get_s3_bucket(bucket_name):
-	s3 = boto3.resource('s3')
-	return s3.Bucket(bucket_name)
 
 
 def get_value(json_node):
@@ -91,6 +88,7 @@ def get_s3_prefix_path(work_local_id, imagegroup):
 	
 	return f'Works/{two}/{work_local_id}/images/{work_local_id}-{suffix}'
 
+
 def get_s3_bits(s3path, bucket):
 	"""
 	get the s3 binary data in memory
@@ -106,19 +104,16 @@ def get_s3_bits(s3path, bucket):
 			raise
 	return
 
-def save_file(bits, origfilename, imagegroup_output_dir):
+
+def save_file(bits, origfilename, imagegroup_output_dir, bucket):
 	"""
-	uses pillow to interpret the bits as an image and save as a format
-	that is appropriate for Google Vision (png instead of tiff for instance).
-	This may also apply some automatic treatment
+	uses pillow to apply some automatic treatment and save the image.
 	"""
-	imagegroup_output_dir.mkdir(exist_ok=True, parents=True)
-	output_fn = imagegroup_output_dir/origfilename
-	if origfilename.endswith('.tif'):
-		img = Image.open(bits)
-		output_fn.write_bytes(img)
-	else:
-		output_fn.write_bytes(bits.getbuffer())
+	bucket.put_object(
+		Key=str(imagegroup_output_dir/origfilename),
+		Body=bits.getbuffer()
+	)
+	
 
 def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_base_dir, bucket):
 	"""
@@ -131,14 +126,34 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
 		s3path = s3prefix+"/"+imageinfo['filename']
 		filebits = get_s3_bits(s3path, bucket)
 		imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
-		save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
+		save_file(filebits, imageinfo['filename'], imagegroup_output_dir, bucket)
 
-def apply_ocr_on_folder(imagesfolder, work_local_id, imagegroup, ocr_base_dir):
+
+def gzip_str(string_):
+    # taken from https://gist.github.com/Garrett-R/dc6f08fc1eab63f94d2cbb89cb61c33d
+    out = io.BytesIO()
+
+    with gzip.GzipFile(fileobj=out, mode='w') as fo:
+        fo.write(string_.encode())
+
+    bytes_obj = out.getvalue()
+    return bytes_obj
+
+
+def apply_ocr_on_folder(imagesfolder, work_local_id, imagegroup, ocr_base_dir, bucket):
 	"""
 	This function goes through all the images of imagesfolder, passes them to the Google Vision API
 	and saves the output files to ocr_base_dir/work_local_id/imagegroup/filename.json.gz
 	"""
-	return
+	images_dir = imagesfolder/work_local_id/imagegroup/
+	for img_fn in images_dir.iterdir():
+		img = img_fn.read_bytes()
+		result = get_text_from_image(img)
+		gzip_result = gzip_str(result)
+	
+		key = f'{ocr_base_dir}/{work_local_id}/{imagegroup}/{img_fn.name}.json.gz'
+		bucket.put_object(Key=key, Body=gzip_result)
+
 
 def get_info_json():
 	"""
@@ -154,8 +169,9 @@ def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup):
 
 
 if __name__ == "__main__":
-	archive_bucket = get_s3_bucket(ARCHIVE_BUCKET)
-	ocr_output_bucket = get_s3_bucket(OCR_OUTPUT_BUCKET)
+	S3 = boto3.resource('s3') 
+	archive_bucket = S3.Bucket(ARCHIVE_BUCKET)
+	ocr_output_bucket = S3.Bucket(OCR_OUTPUT_BUCKET)
 
 	work = 'bdr:W4CZ5369'
 	for vol_info in get_volume_infos(work):
