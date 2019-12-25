@@ -17,6 +17,9 @@ from ocr.google_ocr import get_text_from_image
 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = "~/.aws/credentials"
 ARCHIVE_BUCKET = "archive.tbrc.org"
 OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
+S3 = boto3.resource('s3') 
+archive_bucket = S3.Bucket(ARCHIVE_BUCKET)
+ocr_output_bucket = S3.Bucket(OCR_OUTPUT_BUCKET)
 
 # URI config
 BDR = Namespace("http://purl.bdrc.io/resource/")
@@ -89,13 +92,13 @@ def get_s3_prefix_path(work_local_id, imagegroup):
 	return f'Works/{two}/{work_local_id}/images/{work_local_id}-{suffix}'
 
 
-def get_s3_bits(s3path, bucket):
+def get_s3_bits(s3path):
 	"""
 	get the s3 binary data in memory
 	"""
 	f = io.BytesIO()
 	try:
-		bucket.download_fileobj(s3path, f)
+		archive_bucket.download_fileobj(s3path, f)
 		return f
 	except botocore.exceptions.ClientError as e:
 		if e.response['Error']['Code'] == '404':
@@ -105,17 +108,16 @@ def get_s3_bits(s3path, bucket):
 	return
 
 
-def save_file(bits, origfilename, imagegroup_output_dir, bucket):
+def save_file(bits, origfilename, imagegroup_output_dir):
 	"""
 	uses pillow to apply some automatic treatment and save the image.
 	"""
-	bucket.put_object(
-		Key=str(imagegroup_output_dir/origfilename),
-		Body=bits.getbuffer()
-	)
-	
+	(imagegroup_output_dir).mkdir(exist_ok=True, parents=True)
+	output_fn = imagegroup_output_dir/origfilename
+	output_fn.write_bytes(bits.getbuffer())
 
-def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_base_dir, bucket):
+
+def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_base_dir):
 	"""
 	this function gets the list of images of a volume and download all the images from s3.
 	The output directory is output_base_dir/work_local_id/imagegroup
@@ -124,9 +126,10 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
 	s3prefix = get_s3_prefix_path(work_local_id, imagegroup)
 	for imageinfo in imagelist:
 		s3path = s3prefix+"/"+imageinfo['filename']
-		filebits = get_s3_bits(s3path, bucket)
+		filebits = get_s3_bits(s3path)
 		imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
-		save_file(filebits, imageinfo['filename'], imagegroup_output_dir, bucket)
+		save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
+		break
 
 
 def gzip_str(string_):
@@ -140,19 +143,21 @@ def gzip_str(string_):
     return bytes_obj
 
 
-def apply_ocr_on_folder(imagesfolder, work_local_id, imagegroup, ocr_base_dir, bucket):
+def apply_ocr_on_folder(images_base_dir, work_local_id, imagegroup, ocr_base_dir):
 	"""
 	This function goes through all the images of imagesfolder, passes them to the Google Vision API
 	and saves the output files to ocr_base_dir/work_local_id/imagegroup/filename.json.gz
 	"""
-	images_dir = imagesfolder/work_local_id/imagegroup/
+	images_dir = images_base_dir/work_local_id/imagegroup
+	ocr_output_dir = ocr_base_dir/work_local_id/imagegroup
+	ocr_base_dir.mkdir(exist_ok=True, parents=True)
+
 	for img_fn in images_dir.iterdir():
-		img = img_fn.read_bytes()
-		result = get_text_from_image(img)
+		result = get_text_from_image(str(img_fn))
 		gzip_result = gzip_str(result)
-	
-		key = f'{ocr_base_dir}/{work_local_id}/{imagegroup}/{img_fn.name}.json.gz'
-		bucket.put_object(Key=key, Body=gzip_result)
+
+		result_fn = ocr_output_dir/f'{img_fn.name}.json.gz'
+		result_fn.write_bytes(gzip_result)
 
 
 def get_info_json():
@@ -160,26 +165,40 @@ def get_info_json():
 	This returns an object that can be serialied as info.json as specified for BDRC s3 storage.
 	"""
 	return
+	
 
 def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup):
 	"""
 	This function uploads the images on s3, according to the schema set up by BDRC, see documentation
 	"""
-	return
+	images_dir = images_base_dir/work_local_id/imagegroup
+	for img_fn in images_dir.iterdir():
+		ocr_output_bucket.put_object(key=str(img_fn), Body=img_fn.read_bytes())
+	
+	ocr_output_dir = ocr_base_dir/work_local_id/imagegroup
+	for out_fn in ocr_base_dir.iterdir():
+		ocr_output_bucket.put_object(key=str(out_fn), Body=out_fn.read_bytes())
 
 
 if __name__ == "__main__":
-	S3 = boto3.resource('s3') 
-	archive_bucket = S3.Bucket(ARCHIVE_BUCKET)
-	ocr_output_bucket = S3.Bucket(OCR_OUTPUT_BUCKET)
-
 	work = 'bdr:W4CZ5369'
+	data = Path('./data')
+	images_base_dir = data/'images'
+	ocr_base_dir = data/'ocrs'
+
 	for vol_info in get_volume_infos(work):
 		work_local_id = work.split(':')[-1] if ':' in work else work
+		
 		save_images_for_vol(
 			volume_prefix_url=vol_info['volume_prefix_url'],
 			work_local_id=work_local_id, 
 			imagegroup=vol_info['imagegroup'],
-			images_base_dir=Path('./'),
-			bucket=archive_bucket
+			images_base_dir=images_base_dir
+		)
+
+		apply_ocr_on_folder(
+			images_base_dir=images_base_dir,
+			work_local_id=work_local_id,
+			imagegroup=vol_info['imagegroup'],
+			ocr_base_dir=ocr_base_dir
 		)
