@@ -1,3 +1,4 @@
+from datetime import datetime
 import io
 import os
 import hashlib
@@ -25,6 +26,8 @@ ocr_output_bucket = S3.Bucket(OCR_OUTPUT_BUCKET)
 BDR = Namespace("http://purl.bdrc.io/resource/")
 NSM = NamespaceManager(rdflib.Graph())
 NSM.bind("bdr", BDR)
+
+SERVICE = "vision"
 
 
 def get_value(json_node):
@@ -164,13 +167,26 @@ def get_info_json():
 	"""
 	This returns an object that can be serialied as info.json as specified for BDRC s3 storage.
 	"""
-	return
+	# get current date and time
+	now = datetime.now()
+	date = now.date()
+	time = now.time()
+
+	info = {
+		"timestamp": {
+			"date": str(date),
+			"time": str(time).split('.')[0]	
+		}
+	}
+	return info
 	
 
 def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup):
 	"""
 	This function uploads the images on s3, according to the schema set up by BDRC, see documentation
 	"""
+	info_json = get_info_json()
+
 	images_dir = images_base_dir/work_local_id/imagegroup
 	for img_fn in images_dir.iterdir():
 		ocr_output_bucket.put_object(key=str(img_fn), Body=img_fn.read_bytes())
@@ -181,24 +197,25 @@ def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup):
 
 
 if __name__ == "__main__":
-	work = 'bdr:W4CZ5369'
-	data = Path('./data')
-	images_base_dir = data/'images'
-	ocr_base_dir = data/'ocrs'
+	# work = 'bdr:W4CZ5369'
+	# data = Path('./data')
+	# images_base_dir = data/'images'
+	# ocr_base_dir = data/'ocrs'
 
-	for vol_info in get_volume_infos(work):
-		work_local_id = work.split(':')[-1] if ':' in work else work
+	# for vol_info in get_volume_infos(work):
+	# 	work_local_id = work.split(':')[-1] if ':' in work else work
 		
-		save_images_for_vol(
-			volume_prefix_url=vol_info['volume_prefix_url'],
-			work_local_id=work_local_id, 
-			imagegroup=vol_info['imagegroup'],
-			images_base_dir=images_base_dir
-		)
+	# 	save_images_for_vol(
+	# 		volume_prefix_url=vol_info['volume_prefix_url'],
+	# 		work_local_id=work_local_id, 
+	# 		imagegroup=vol_info['imagegroup'],
+	# 		images_base_dir=images_base_dir
+	# 	)
 
-		apply_ocr_on_folder(
-			images_base_dir=images_base_dir,
-			work_local_id=work_local_id,
-			imagegroup=vol_info['imagegroup'],
-			ocr_base_dir=ocr_base_dir
-		)
+	# 	apply_ocr_on_folder(
+	# 		images_base_dir=images_base_dir,
+	# 		work_local_id=work_local_id,
+	# 		imagegroup=vol_info['imagegroup'],
+	# 		ocr_base_dir=ocr_base_dir
+	# 	)
+	get_info_json()
