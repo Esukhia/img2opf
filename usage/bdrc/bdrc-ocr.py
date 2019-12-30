@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path
+import pytz
 import shutil
 
 import boto3
@@ -195,15 +196,10 @@ def get_info_json():
 	This returns an object that can be serialied as info.json as specified for BDRC s3 storage.
 	"""
 	# get current date and time
-	now = datetime.now()
-	date = now.date()
-	time = now.time()
+	now = datetime.now(pytz.utc).isoformat()
 
 	info = {
-		"timestamp": {
-			"date": str(date),
-			"time": str(time).split('.')[0]	
-		},
+		"timestamp": now.split('.')[0],
 		'imagesfolder': IMAGES
 	}
 	
