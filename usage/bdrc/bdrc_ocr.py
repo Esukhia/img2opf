@@ -45,14 +45,12 @@ IMAGES_BASE_DIR = DATA_PATH/IMAGES
 OCR_BASE_DIR = DATA_PATH/OUTPUT
 
 
-def is_archive_exist(key):
+def is_archived(key):
     try:
-        s3.Object('my-bucket', 'dootdoot.jpg').load()
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == "404":
-            return False
-    else:
-        return True
+        S3.head_object(Bucket=OCR_OUTPUT_BUCKET, Key=key)
+    except botocore.errorfactory.ClientError:
+        return False
+    return True
 
 
 def get_value(json_node):
@@ -233,12 +231,14 @@ def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup, s3_p
     images_dir = images_base_dir/work_local_id/imagegroup
     for img_fn in images_dir.iterdir():
         s3_image_path = f'{s3_paths[IMAGES]}/{img_fn.name}'
+        if is_archived(s3_image_path): continue
         ocr_output_bucket.put_object(Key=s3_image_path, Body=img_fn.read_bytes())
     
     # archive ocr output
     ocr_output_dir = ocr_base_dir/work_local_id/imagegroup
     for out_fn in ocr_output_dir.iterdir():
         s3_output_path = f'{s3_paths[OUTPUT]}/{out_fn.name}'
+        if is_archived(s3_output_path): continue
         ocr_output_bucket.put_object(Key=s3_output_path, Body=out_fn.read_bytes())
 
 
@@ -246,10 +246,8 @@ def clean_up(data_path, work_local_id, imagegroup):
     """
     delete all the images and output of the archived volume (imagegroup)
     """
-    vol_image_path = data_path/IMAGES/work_local_id/imagegroup
-    vol_output_path = data_path/OUTPUT/work_local_id/imagegroup
+    vol_image_path = data_path/IMAGES/work_local_id
     shutil.rmtree(str(vol_image_path))
-    shutil.rmtree(str(vol_output_path))
 
 
 def process_work(work):
@@ -295,11 +293,8 @@ def process_work(work):
         )
         print('\t\t- Archived volume images and ocr output')
 
-        # delete current ocred volume
-        clean_up(DATA_PATH, work_local_id, vol_info['imagegroup'])
-        print('\t\t- Cleaned up volume images and ocr output')
-
         print(f'\t[INFO] Volume {vol_info["imagegroup"]} completed.')
+
 
 
 def get_work_ids(fn):
@@ -316,3 +311,6 @@ if __name__ == "__main__":
             print(f'[INFO] Work {work_id} processing ....')
             process_work(work_id)
             print(f'[INFO] Work {work_id} completed.')
+            
+            # delete the work
+            clean_up(DATA_PATH, work_local_id, vol_info['imagegroup'])
