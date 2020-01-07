@@ -23,7 +23,8 @@ from ocr.google_ocr import get_text_from_image
 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = "~/.aws/credentials"
 ARCHIVE_BUCKET = "archive.tbrc.org"
 OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
-S3 = boto3.resource('s3') 
+S3 = boto3.resource('s3')
+S3_client = boto3.client('s3')
 archive_bucket = S3.Bucket(ARCHIVE_BUCKET)
 ocr_output_bucket = S3.Bucket(OCR_OUTPUT_BUCKET)
 
@@ -221,7 +222,7 @@ def get_info_json():
 
 def is_archived(key):
     try:
-        S3.head_object(Bucket=OCR_OUTPUT_BUCKET, Key=key)
+        S3_client.head_object(Bucket=OCR_OUTPUT_BUCKET, Key=key)
     except botocore.errorfactory.ClientError:
         return False
     return 

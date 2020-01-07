@@ -25,9 +25,10 @@ def convert_old_result(images_base_dir, work_path, work_local_id, imagegroup, oc
 
     imgs_and_old_results = [sorted(images_dir.iterdir()), sorted(result_dir.iterdir())]
     for img_fn, old_result_fn in zip(*imgs_and_old_results):
+        result_fn = ocr_output_dir/f'{img_fn.stem}.json.gz'
+        if result_fn.is_file(): continue
         result = json.dumps(json.load(old_result_fn.open()))
         gzip_result = gzip_str(result)
-        result_fn = ocr_output_dir/f'{img_fn.stem}.json.gz'
         result_fn.write_bytes(gzip_result)
 
 
@@ -54,6 +55,7 @@ def process_work(work_path):
             imagegroup=vol_info['imagegroup'],
             ocr_base_dir=OCR_BASE_DIR
         )
+        print('\t\t- Converted old results')
 
         # get s3 paths to save images and ocr output
         s3_ocr_paths = get_s3_prefix_path(
