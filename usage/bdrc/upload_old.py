@@ -76,10 +76,10 @@ def process_work(work_path):
 
 
 if __name__ == "__main__":
-	# parser = argparse.ArgumentParser(description='Process some integers.')
-    # parser.add_argument('--output', '-o', help='path to workids file')
-	# output_path = Path(args.output)
-	output_path = Path('usage/bdrc/output')
+	parser = argparse.ArgumentParser(description='Process some integers.')
+	parser.add_argument('--output', '-o', help='path to workids file')
+	output_path = Path(args.output)
+	# output_path = Path('usage/bdrc/output')
 
 	for work_path in output_path.iterdir():
 		print(f'[INFO] Work {work_path.name} processing ....')
