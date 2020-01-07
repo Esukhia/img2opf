@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from bdrc_ocr import save_images_for_vol, archive_on_s3, get_volume_infos, gzip_str
+from bdrc_ocr import save_images_for_vol, archive_on_s3, get_volume_infos, gzip_str, get_s3_prefix_path
 
 
 # s3 bucket directory config
