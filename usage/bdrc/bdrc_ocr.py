@@ -309,7 +309,7 @@ def get_work_ids(fn):
 
 
 if __name__ == "__main__":
-	input_path = Path('usage/bdrc/input')
+	input_path = Path('./input')
 
 	for workids_path in input_path.iterdir():
 		for work_id in get_work_ids(workids_path):
