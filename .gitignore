@@ -6,3 +6,4 @@ dev/
 **/output/
 **/__pycache__/
 *.egg-info/
+archive/

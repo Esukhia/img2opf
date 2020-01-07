@@ -45,6 +45,16 @@ IMAGES_BASE_DIR = DATA_PATH/IMAGES
 OCR_BASE_DIR = DATA_PATH/OUTPUT
 
 
+def is_archive_exist(key):
+	try:
+		s3.Object('my-bucket', 'dootdoot.jpg').load()
+	except botocore.exceptions.ClientError as e:
+		if e.response['Error']['Code'] == "404":
+			return False
+	else:
+		return True
+
+
 def get_value(json_node):
 	if json_node['type'] == 'literal':
 		return json_node['value']
@@ -78,7 +88,7 @@ def get_volume_infos(work_prefix_url):
 	"""
 	r = requests.get(f'http://purl.bdrc.io/query/table/volumesForWork?R_RES={work_prefix_url}&format=json&pageSize=400')
 	if r.status_code != 200:
-		print("error %d when fetching volumes for %s" %(r.status_code, qname))
+		print("error %d when fetching volumes for %s" %(r.status_code, work_prefix_url))
 		return
 	# the result of the query is already in ascending volume order
 	res = r.json()
@@ -143,9 +153,11 @@ def save_file(bits, origfilename, imagegroup_output_dir):
 	if origfilename.endswith('.tif'):
 		img = Image.open(bits)
 		output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
+		if output_fn.is_file(): return
 		img.save(str(output_fn))
 	else:
 		output_fn = imagegroup_output_dir/origfilename
+		if output_fn.is_file(): return
 		output_fn.write_bytes(bits.getbuffer())
 
 
@@ -184,10 +196,10 @@ def apply_ocr_on_folder(images_base_dir, work_local_id, imagegroup, ocr_base_dir
 	ocr_output_dir.mkdir(exist_ok=True, parents=True)
 
 	for img_fn in images_dir.iterdir():
+		result_fn = ocr_output_dir/f'{img_fn.stem}.json.gz'
+		if result_fn.is_file(): continue
 		result = get_text_from_image(str(img_fn))
 		gzip_result = gzip_str(result)
-
-		result_fn = ocr_output_dir/f'{img_fn.stem}.json.gz'
 		result_fn.write_bytes(gzip_result)
 
 
