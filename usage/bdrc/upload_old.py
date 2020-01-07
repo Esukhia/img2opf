@@ -78,6 +78,8 @@ def process_work(work_path):
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Process some integers.')
 	parser.add_argument('--output', '-o', help='path to workids file')
+	args = parser.parse_args()
+	
 	output_path = Path(args.output)
 	# output_path = Path('usage/bdrc/output')
 
