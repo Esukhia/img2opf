@@ -222,10 +222,10 @@ def get_info_json():
 
 def is_archived(key):
     try:
-        S3_client.head_object(Bucket=OCR_OUTPUT_BUCKET, Key=key)
+        S3.head_object(Bucket=OCR_OUTPUT_BUCKET, Key=key)
     except botocore.errorfactory.ClientError:
         return False
-    return 
+    return True
 
 
 def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup, s3_paths):
