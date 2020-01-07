@@ -45,14 +45,6 @@ IMAGES_BASE_DIR = DATA_PATH/IMAGES
 OCR_BASE_DIR = DATA_PATH/OUTPUT
 
 
-def is_archived(key):
-    try:
-        S3.head_object(Bucket=OCR_OUTPUT_BUCKET, Key=key)
-    except botocore.errorfactory.ClientError:
-        return False
-    return True
-
-
 def get_value(json_node):
     if json_node['type'] == 'literal':
         return json_node['value']
@@ -159,6 +151,17 @@ def save_file(bits, origfilename, imagegroup_output_dir):
         output_fn.write_bytes(bits.getbuffer())
 
 
+def image_exists_locally(origfilename, imagegroup_output_dir):
+    if origfilename.endswith('.tif'):
+        output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
+        if output_fn.is_file(): return True
+    else:
+        output_fn = imagegroup_output_dir/origfilename
+        if output_fn.is_file(): return True
+
+    return False
+
+
 def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_base_dir):
     """
     this function gets the list of images of a volume and download all the images from s3.
@@ -166,9 +169,10 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
     """
     s3prefix = get_s3_prefix_path(work_local_id, imagegroup)
     for imageinfo in get_s3_image_list(volume_prefix_url):
+        imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
+        if image_exists_locally(imageinfo['filename'], imagegroup_output_dir): continue
         s3path = s3prefix+"/"+imageinfo['filename']
         filebits = get_s3_bits(s3path)
-        imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
         save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
 
 
@@ -213,7 +217,15 @@ def get_info_json():
     }
     
     return info
-    
+
+
+def is_archived(key):
+    try:
+        S3.head_object(Bucket=OCR_OUTPUT_BUCKET, Key=key)
+    except botocore.errorfactory.ClientError:
+        return False
+    return 
+
 
 def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup, s3_paths):
     """
