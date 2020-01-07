@@ -172,7 +172,6 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
 		filebits = get_s3_bits(s3path)
 		imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
 		save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
-		break
 
 
 def gzip_str(string_):
