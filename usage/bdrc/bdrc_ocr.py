@@ -44,6 +44,7 @@ INFO_FN = 'info.json'
 DATA_PATH = Path('./archive')
 IMAGES_BASE_DIR = DATA_PATH/IMAGES
 OCR_BASE_DIR = DATA_PATH/OUTPUT
+CHECK_POINT_FN = DATA_PATH/'last_vol.cp'
 
 
 def get_value(json_node):
@@ -265,48 +266,55 @@ def clean_up(data_path, work_local_id, imagegroup):
 
 def process_work(work):
     work_local_id = work.split(':')[-1] if ':' in work else work
+    if CHECK_POINT_FN.is_file():
+        last_vol = CHECK_POINT_FN.read_text().strip()
 
     for vol_info in get_volume_infos(work):
+        if vol_info['imagegroup'] > last_vol: continue
+
         print(f'\t[INFO] Volume {vol_info["imagegroup"]} processing ....')
+        try:
+            # save all the images for a given vol
+            save_images_for_vol(
+                volume_prefix_url=vol_info['volume_prefix_url'],
+                work_local_id=work_local_id, 
+                imagegroup=vol_info['imagegroup'],
+                images_base_dir=IMAGES_BASE_DIR
+            )
+            print('\t\t- Saved volume images')
 
-        # save all the images for a given vol
-        save_images_for_vol(
-            volume_prefix_url=vol_info['volume_prefix_url'],
-            work_local_id=work_local_id, 
-            imagegroup=vol_info['imagegroup'],
-            images_base_dir=IMAGES_BASE_DIR
-        )
-        print('\t\t- Saved volume images')
+            # apply ocr on the vol images
+            apply_ocr_on_folder(
+                images_base_dir=IMAGES_BASE_DIR,
+                work_local_id=work_local_id,
+                imagegroup=vol_info['imagegroup'],
+                ocr_base_dir=OCR_BASE_DIR
+            )
+            print('\t\t- Saved volume ocr output')
 
-        # apply ocr on the vol images
-        apply_ocr_on_folder(
-            images_base_dir=IMAGES_BASE_DIR,
-            work_local_id=work_local_id,
-            imagegroup=vol_info['imagegroup'],
-            ocr_base_dir=OCR_BASE_DIR
-        )
-        print('\t\t- Saved volume ocr output')
+            # get s3 paths to save images and ocr output
+            s3_ocr_paths = get_s3_prefix_path(
+                work_local_id=work_local_id,
+                imagegroup=vol_info['imagegroup'],
+                service=SERVICE,
+                batch_prefix=BATCH_PREFIX,
+                data_types=[IMAGES, OUTPUT]
+            )
 
-        # get s3 paths to save images and ocr output
-        s3_ocr_paths = get_s3_prefix_path(
-            work_local_id=work_local_id,
-            imagegroup=vol_info['imagegroup'],
-            service=SERVICE,
-            batch_prefix=BATCH_PREFIX,
-            data_types=[IMAGES, OUTPUT]
-        )
+            # save image and ocr output at ocr.bdrc.org bucket
+            archive_on_s3(
+                images_base_dir=IMAGES_BASE_DIR,
+                ocr_base_dir=OCR_BASE_DIR,
+                work_local_id=work_local_id,
+                imagegroup=vol_info['imagegroup'],
+                s3_paths=s3_ocr_paths
+            )
+            print('\t\t- Archived volume images and ocr output')
 
-        # save image and ocr output at ocr.bdrc.org bucket
-        archive_on_s3(
-            images_base_dir=IMAGES_BASE_DIR,
-            ocr_base_dir=OCR_BASE_DIR,
-            work_local_id=work_local_id,
-            imagegroup=vol_info['imagegroup'],
-            s3_paths=s3_ocr_paths
-        )
-        print('\t\t- Archived volume images and ocr output')
-
-        print(f'\t[INFO] Volume {vol_info["imagegroup"]} completed.')
+            print(f'\t[INFO] Volume {vol_info["imagegroup"]} completed.')
+        except:
+            print(f'\t[ERROR] Error occured while processing Volume {vol_info["imagegroup"]}')
+            CHECK_POINT_FN.write_text(vol_info['imagegroup'])
 
 
 
@@ -317,7 +325,7 @@ def get_work_ids(fn):
 
 
 if __name__ == "__main__":
-    input_path = Path('./input')
+    input_path = Path('./usage/bdrc/input')
 
     for workids_path in input_path.iterdir():
         for work_id in get_work_ids(workids_path):
