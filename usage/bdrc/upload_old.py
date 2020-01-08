@@ -43,7 +43,7 @@ def process_work(work_path):
         last_vol = CHECK_POINT_FN.read_text().strip()
 
     for vol_info in get_volume_infos(volume_prefix_url):
-        if vol_info['imagegroup'] > last_vol: continue
+        if vol_info['imagegroup'] < last_vol: continue
 
         print(f'\t[INFO] Volume {vol_info["imagegroup"]} processing ....')
         try:
