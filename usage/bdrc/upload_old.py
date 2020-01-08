@@ -28,7 +28,10 @@ def convert_old_result(images_base_dir, work_path, work_local_id, imagegroup, oc
     for img_fn, old_result_fn in zip(*imgs_and_old_results):
         result_fn = ocr_output_dir/f'{img_fn.stem}.json.gz'
         if result_fn.is_file(): continue
-        result = json.dumps(json.load(old_result_fn.open()))
+        try:
+            result = json.dumps(json.load(old_result_fn.open()))
+        except:
+            continue
         gzip_result = gzip_str(result)
         result_fn.write_bytes(gzip_result)
 
@@ -83,6 +86,7 @@ def process_work(work_path):
         except:
             print(f'\t[ERROR] Error occured while processing Volume {vol_info["imagegroup"]}')
             CHECK_POINT_FN.write_text(vol_info['imagegroup'])
+            break
 
 
 if __name__ == "__main__":
