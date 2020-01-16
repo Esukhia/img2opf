@@ -17,6 +17,7 @@ from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, NamespaceManager
 
 from ocr.google_ocr import get_text_from_image
+from ocr.slack_notifier import slack_notifier
 
 
 # S3 config
@@ -61,7 +62,7 @@ def get_s3_image_list(volume_prefix_url):
     """
     r = requests.get(f'https://iiifpres.bdrc.io/il/v:{volume_prefix_url}')
     if r.status_code != 200:
-        print("error "+r.status_code+" when fetching volumes for "+qname)
+        slack_notifier("error "+r.status_code+" when fetching volumes for "+qname)
         return
     return r.json()
 
@@ -80,7 +81,7 @@ def get_volume_infos(work_prefix_url):
     """
     r = requests.get(f'http://purl.bdrc.io/query/table/volumesForWork?R_RES={work_prefix_url}&format=json&pageSize=400')
     if r.status_code != 200:
-        print("error %d when fetching volumes for %s" %(r.status_code, work_prefix_url))
+        slack_notifier("error %d when fetching volumes for %s" %(r.status_code, work_prefix_url))
         return
     # the result of the query is already in ascending volume order
     res = r.json()
@@ -129,7 +130,7 @@ def get_s3_bits(s3path):
         return f
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == '404':
-            print('The object does not exist.')
+            slack_notifier('The object does not exist.')
         else:
             raise
     return
@@ -270,9 +271,10 @@ def process_work(work):
         last_vol = CHECK_POINT_FN.read_text().strip()
 
     for vol_info in get_volume_infos(work):
-        if vol_info['imagegroup'] > last_vol: continue
+        if last_vol:
+            if vol_info['imagegroup'] > last_vol: continue
 
-        print(f'\t[INFO] Volume {vol_info["imagegroup"]} processing ....')
+        slack_notifier(f'\t[INFO] Volume {vol_info["imagegroup"]} processing ....')
         try:
             # save all the images for a given vol
             save_images_for_vol(
@@ -281,7 +283,7 @@ def process_work(work):
                 imagegroup=vol_info['imagegroup'],
                 images_base_dir=IMAGES_BASE_DIR
             )
-            print('\t\t- Saved volume images')
+            slack_notifier('\t\t- Saved volume images')
 
             # apply ocr on the vol images
             apply_ocr_on_folder(
@@ -290,7 +292,7 @@ def process_work(work):
                 imagegroup=vol_info['imagegroup'],
                 ocr_base_dir=OCR_BASE_DIR
             )
-            print('\t\t- Saved volume ocr output')
+            slack_notifier('\t\t- Saved volume ocr output')
 
             # get s3 paths to save images and ocr output
             s3_ocr_paths = get_s3_prefix_path(
@@ -309,11 +311,11 @@ def process_work(work):
                 imagegroup=vol_info['imagegroup'],
                 s3_paths=s3_ocr_paths
             )
-            print('\t\t- Archived volume images and ocr output')
+            slack_notifier('\t\t- Archived volume images and ocr output')
 
-            print(f'\t[INFO] Volume {vol_info["imagegroup"]} completed.')
+            slack_notifier(f'\t[INFO] Volume {vol_info["imagegroup"]} completed.')
         except:
-            print(f'\t[ERROR] Error occured while processing Volume {vol_info["imagegroup"]}')
+            slack_notifier(f'\t[ERROR] Error occured while processing Volume {vol_info["imagegroup"]}')
             CHECK_POINT_FN.write_text(vol_info['imagegroup'])
 
 
@@ -327,11 +329,13 @@ def get_work_ids(fn):
 if __name__ == "__main__":
     input_path = Path('./usage/bdrc/input')
 
+    slack_notifier('[Start] Google OCR is running...')
+
     for workids_path in input_path.iterdir():
         for work_id in get_work_ids(workids_path):
-            print(f'[INFO] Work {work_id} processing ....')
+            slack_notifier(f'[INFO] Work {work_id} processing ....')
             process_work(work_id)
-            print(f'[INFO] Work {work_id} completed.')
+            slack_notifier(f'[INFO] Work {work_id} completed.')
             
             # delete the work
             clean_up(DATA_PATH, work_local_id, vol_info['imagegroup'])

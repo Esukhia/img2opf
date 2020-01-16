@@ -43,7 +43,8 @@ def process_work(work_path):
         last_vol = CHECK_POINT_FN.read_text().strip()
 
     for vol_info in get_volume_infos(volume_prefix_url):
-        if vol_info['imagegroup'] < last_vol: continue
+        if last_vol:
+            if vol_info['imagegroup'] < last_vol: continue
 
         print(f'\t[INFO] Volume {vol_info["imagegroup"]} processing ....')
         try:
@@ -90,12 +91,12 @@ def process_work(work_path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--output', '-o', help='path to workids file')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='Process some integers.')
+    # parser.add_argument('--output', '-o', help='path to workids file')
+    # args = parser.parse_args()
     
-    output_path = Path(args.output)
-    # output_path = Path('usage/bdrc/output')
+    # output_path = Path(args.output)
+    output_path = Path('usage/bdrc/output')
 
     for work_path in output_path.iterdir():
         print(f'[INFO] Work {work_path.name} processing ....')
