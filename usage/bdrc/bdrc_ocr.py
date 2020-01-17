@@ -366,10 +366,10 @@ if __name__ == "__main__":
         for work_id in get_work_ids(workids_path):
             if CHECK_POINT[WORK] and work_id in CHECK_POINT[WORK]: continue
             notifier(f'`[OCR]` _Work {work_id} processing ...._')
-            #try:
-            process_work(work_id)
-            # except:
-            #     slack_notifier('`[ERROR] Error occured`')
-            #     slack_notifier('`[Restart]` *Restarting the script* ...')
-            #     os.execv(sys.executable, ['python'] + sys.argv)
+            try:
+                process_work(work_id)
+            except:
+                slack_notifier('`[ERROR] Error occured`')
+                slack_notifier('`[Restart]` *Restarting the script* ...')
+                os.execv(sys.executable, ['python'] + sys.argv)
         notifier(f'[INFO] Completed {workids_path.name}')
