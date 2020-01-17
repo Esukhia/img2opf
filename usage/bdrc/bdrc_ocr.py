@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 import gzip
 import hashlib
@@ -7,6 +8,7 @@ import os
 from pathlib import Path
 import pytz
 import shutil
+import sys
 
 import boto3
 import botocore
@@ -45,7 +47,16 @@ INFO_FN = 'info.json'
 DATA_PATH = Path('./archive')
 IMAGES_BASE_DIR = DATA_PATH/IMAGES
 OCR_BASE_DIR = DATA_PATH/OUTPUT
-CHECK_POINT_FN = DATA_PATH/'last_vol.cp'
+CHECK_POINT_FN = DATA_PATH/'checkpoint.json'
+
+# Checkpoint config
+CHECK_POINT = defaultdict(list)
+COLLECTION = 'collection'
+WORK = 'work'
+VOL = 'imagegroup'
+
+# notifier config
+notifier = slack_notifier
 
 
 def get_value(json_node):
@@ -261,29 +272,30 @@ def clean_up(data_path, work_local_id, imagegroup):
     """
     delete all the images and output of the archived volume (imagegroup)
     """
-    vol_image_path = data_path/IMAGES/work_local_id
+    vol_image_path = data_path/IMAGES/work_local_id/imagegroup
+    vol_output_path = data_path/OUTPUT/work_local_id/imagegroup
     shutil.rmtree(str(vol_image_path))
+    shutil.rmtree(str(vol_output_path))
 
 
 def process_work(work):
     work_local_id = work.split(':')[-1] if ':' in work else work
-    if CHECK_POINT_FN.is_file():
-        last_vol = CHECK_POINT_FN.read_text().strip()
 
-    for vol_info in get_volume_infos(work):
-        if last_vol:
-            if vol_info['imagegroup'] > last_vol: continue
+    if work == 'bdr:W1PD89084':
+        save_check_point(work=work)
+        return
+    for i, vol_info in enumerate(get_volume_infos(work)):
+        if CHECK_POINT[VOL] and vol_info['imagegroup'] < CHECK_POINT[VOL]: continue
 
-        slack_notifier(f'\t[INFO] Volume {vol_info["imagegroup"]} processing ....')
+        notifier(f'* Volume {vol_info["imagegroup"]} processing ....')
         try:
             # save all the images for a given vol
             save_images_for_vol(
                 volume_prefix_url=vol_info['volume_prefix_url'],
-                work_local_id=work_local_id, 
+                work_local_id=work_local_id,
                 imagegroup=vol_info['imagegroup'],
                 images_base_dir=IMAGES_BASE_DIR
             )
-            slack_notifier('\t\t- Saved volume images')
 
             # apply ocr on the vol images
             apply_ocr_on_folder(
@@ -292,7 +304,6 @@ def process_work(work):
                 imagegroup=vol_info['imagegroup'],
                 ocr_base_dir=OCR_BASE_DIR
             )
-            slack_notifier('\t\t- Saved volume ocr output')
 
             # get s3 paths to save images and ocr output
             s3_ocr_paths = get_s3_prefix_path(
@@ -311,13 +322,14 @@ def process_work(work):
                 imagegroup=vol_info['imagegroup'],
                 s3_paths=s3_ocr_paths
             )
-            slack_notifier('\t\t- Archived volume images and ocr output')
 
-            slack_notifier(f'\t[INFO] Volume {vol_info["imagegroup"]} completed.')
+            # delete the volume
+            clean_up(DATA_PATH, work_local_id, vol_info['imagegroup'])
         except:
-            slack_notifier(f'\t[ERROR] Error occured while processing Volume {vol_info["imagegroup"]}')
-            CHECK_POINT_FN.write_text(vol_info['imagegroup'])
-
+            # create checkpoint
+            save_check_point(imagegroup=vol_info['imagegroup'])
+            raise RuntimeError
+    save_check_point(work=work)
 
 
 def get_work_ids(fn):
@@ -326,16 +338,34 @@ def get_work_ids(fn):
         yield work.strip()
 
 
+def load_check_point():
+    check_point = json.load(CHECK_POINT_FN.open())
+    CHECK_POINT[WORK] = check_point[WORK]
+    CHECK_POINT[VOL] = check_point[VOL]
+
+
+def save_check_point(work=None, imagegroup=None):
+    if work and work not in CHECK_POINT[WORK]:
+        CHECK_POINT[WORK].append(work)
+    if imagegroup:
+        CHECK_POINT[VOL] = imagegroup
+    json.dump(CHECK_POINT, CHECK_POINT_FN.open('w'))
+
+
 if __name__ == "__main__":
     input_path = Path('./usage/bdrc/input')
 
-    slack_notifier('[Start] Google OCR is running...')
-
+    notifier('`[Start]` *Google OCR is running* ...')
+    if CHECK_POINT_FN.is_file():
+        load_check_point()
     for workids_path in input_path.iterdir():
         for work_id in get_work_ids(workids_path):
-            slack_notifier(f'[INFO] Work {work_id} processing ....')
-            process_work(work_id)
-            slack_notifier(f'[INFO] Work {work_id} completed.')
-            
-            # delete the work
-            clean_up(DATA_PATH, work_local_id, vol_info['imagegroup'])
+            if CHECK_POINT[WORK] and work_id in CHECK_POINT[WORK]: continue
+            notifier(f'`[OCR]` _Work {work_id} processing ...._')
+            try:
+                process_work(work_id)
+            except:
+                slack_notifier('`[ERROR] Error occured`')
+                slack_notifier('`[Restart]` *Restarting the script* ...')
+                os.execv(sys.executable, ['python'] + sys.argv)
+        notifier(f'[INFO] Completed {workids_path.name}')
