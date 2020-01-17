@@ -73,7 +73,7 @@ def get_s3_image_list(volume_prefix_url):
     """
     r = requests.get(f'https://iiifpres.bdrc.io/il/v:{volume_prefix_url}')
     if r.status_code != 200:
-        slack_notifier("error "+r.status_code+" when fetching volumes for "+qname)
+        notifier(f"`[Error] error {r.status_code} when fetching volumes for {qname}`")
         return
     return r.json()
 
@@ -92,7 +92,7 @@ def get_volume_infos(work_prefix_url):
     """
     r = requests.get(f'http://purl.bdrc.io/query/table/volumesForWork?R_RES={work_prefix_url}&format=json&pageSize=400')
     if r.status_code != 200:
-        slack_notifier("error %d when fetching volumes for %s" %(r.status_code, work_prefix_url))
+        slack_notifier(f"`[Error] error {r.status_code} when fetching volumes for {work_prefix_url}`")
         return
     # the result of the query is already in ascending volume order
     res = r.json()
@@ -278,12 +278,16 @@ def clean_up(data_path, work_local_id, imagegroup):
     shutil.rmtree(str(vol_output_path))
 
 
-def process_work(work):
-    work_local_id = work.split(':')[-1] if ':' in work else work
+def get_work_local_id(work):
+    if ':' in work:
+        return work.split(':')[-1], work
+    else:
+        return work, f'bdr:{work}'
 
-    if work == 'bdr:W1PD89084':
-        save_check_point(work=work)
-        return
+
+def process_work(work):
+    work_local_id, work = get_work_local_id(work)
+
     for i, vol_info in enumerate(get_volume_infos(work)):
         if CHECK_POINT[VOL] and vol_info['imagegroup'] < CHECK_POINT[VOL]: continue
 
@@ -353,7 +357,7 @@ def save_check_point(work=None, imagegroup=None):
 
 
 if __name__ == "__main__":
-    input_path = Path('Google-OCR/usage/bdrc/input')
+    input_path = Path('usage/bdrc/input')
 
     notifier('`[Start]` *Google OCR is running* ...')
     if CHECK_POINT_FN.is_file():
@@ -362,10 +366,10 @@ if __name__ == "__main__":
         for work_id in get_work_ids(workids_path):
             if CHECK_POINT[WORK] and work_id in CHECK_POINT[WORK]: continue
             notifier(f'`[OCR]` _Work {work_id} processing ...._')
-            try:
-                process_work(work_id)
-            except:
-                slack_notifier('`[ERROR] Error occured`')
-                slack_notifier('`[Restart]` *Restarting the script* ...')
-                os.execv(sys.executable, ['python'] + sys.argv)
+            #try:
+            process_work(work_id)
+            # except:
+            #     slack_notifier('`[ERROR] Error occured`')
+            #     slack_notifier('`[Restart]` *Restarting the script* ...')
+            #     os.execv(sys.executable, ['python'] + sys.argv)
         notifier(f'[INFO] Completed {workids_path.name}')
