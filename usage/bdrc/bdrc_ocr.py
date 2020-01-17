@@ -353,7 +353,7 @@ def save_check_point(work=None, imagegroup=None):
 
 
 if __name__ == "__main__":
-    input_path = Path('./usage/bdrc/input')
+    input_path = Path('~/Google-OCR/usage/bdrc/input')
 
     notifier('`[Start]` *Google OCR is running* ...')
     if CHECK_POINT_FN.is_file():
