@@ -17,6 +17,7 @@ import requests
 import rdflib
 from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, NamespaceManager
+from openpecha.catalog import CatalogManager
 
 from ocr.google_ocr import get_text_from_image
 from ocr.slack_notifier import slack_notifier
@@ -57,6 +58,9 @@ VOL = 'imagegroup'
 
 # notifier config
 notifier = slack_notifier
+
+# openpecha opf setup
+catalog = CatalogManager(formatter_type='ocr')
 
 
 def get_value(json_node):
@@ -188,6 +192,7 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
         s3path = s3prefix+"/"+imageinfo['filename']
         filebits = get_s3_bits(s3path)
         save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
+        break
 
 
 def gzip_str(string_):
@@ -229,7 +234,7 @@ def get_info_json():
         "timestamp": now.split('.')[0],
         'imagesfolder': IMAGES
     }
-    
+
     return info
 
 
@@ -319,20 +324,22 @@ def process_work(work):
             )
 
             # save image and ocr output at ocr.bdrc.org bucket
-            archive_on_s3(
-                images_base_dir=IMAGES_BASE_DIR,
-                ocr_base_dir=OCR_BASE_DIR,
-                work_local_id=work_local_id,
-                imagegroup=vol_info['imagegroup'],
-                s3_paths=s3_ocr_paths
-            )
+            # archive_on_s3(
+            #     images_base_dir=IMAGES_BASE_DIR,
+            #     ocr_base_dir=OCR_BASE_DIR,
+            #     work_local_id=work_local_id,
+            #     imagegroup=vol_info['imagegroup'],
+            #     s3_paths=s3_ocr_paths
+            # )
 
-            # delete the volume
-            clean_up(DATA_PATH, work_local_id, vol_info['imagegroup'])
+            # # delete the volume
+            # clean_up(DATA_PATH, work_local_id, vol_info['imagegroup'])
+            break
         except:
             # create checkpoint
             save_check_point(imagegroup=vol_info['imagegroup'])
             raise RuntimeError
+    catalog.ocr_to_opf(OCR_BASE_DIR/work_local_id)
     save_check_point(work=work)
 
 
@@ -357,7 +364,7 @@ def save_check_point(work=None, imagegroup=None):
 
 
 if __name__ == "__main__":
-    input_path = Path('Google-OCR/usage/bdrc/input')
+    input_path = Path('./usage/bdrc/input')
 
     notifier('`[Start]` *Google OCR is running* ...')
     if CHECK_POINT_FN.is_file():
@@ -366,10 +373,12 @@ if __name__ == "__main__":
         for work_id in get_work_ids(workids_path):
             if CHECK_POINT[WORK] and work_id in CHECK_POINT[WORK]: continue
             notifier(f'`[OCR]` _Work {work_id} processing ...._')
-            try:
-                process_work(work_id)
-            except:
-                slack_notifier('`[ERROR] Error occured`')
-                slack_notifier('`[Restart]` *Restarting the script* ...')
-                os.execv(sys.executable, ['python'] + sys.argv)
+            #try:
+            process_work(work_id)
+            #except:
+            #    slack_notifier('`[ERROR] Error occured`')
+            #    slack_notifier('`[Restart]` *Restarting the script* ...')
+            #    os.execv(sys.executable, ['python'] + sys.argv)
         notifier(f'[INFO] Completed {workids_path.name}')
+
+    catalog.update_catalog()
