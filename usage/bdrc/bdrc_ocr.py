@@ -350,7 +350,7 @@ def process_work(work):
     catalog.ocr_to_opf(OCR_BASE_DIR/work_local_id)
     clean_up(DATA_PATH, work_local_id=work_local_id)
     clean_up(Path('./output'))
-    save_check_point(work=work)
+    save_check_point(work=work_local_id)
 
 
 def get_work_ids(fn):
