@@ -297,7 +297,6 @@ def get_work_local_id(work):
 
 def process_work(work):
     work_local_id, work = get_work_local_id(work)
-    raise KeyError
 
     for i, vol_info in enumerate(get_volume_infos(work)):
         if CHECK_POINT[VOL] and vol_info['imagegroup'] < CHECK_POINT[VOL]: continue
