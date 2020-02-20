@@ -284,7 +284,7 @@ def clean_up(data_path, work_local_id=None, imagegroup=None):
         work_output_path = data_path/OUTPUT/work_local_id
         shutil.rmtree(str(work_output_path))
     else:
-        for path in data_path:
+        for path in data_path.iterdir():
             shutil.rmtree(str(path))
 
 
@@ -374,7 +374,7 @@ def save_check_point(work=None, imagegroup=None):
 
 
 if __name__ == "__main__":
-    input_path = Path('./usage/bdrc/input')
+    input_path = Path('Google-OCR/usage/bdrc/input')
 
     notifier('`[Start]` *Google OCR is running* ...')
     if CHECK_POINT_FN.is_file():
