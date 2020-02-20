@@ -273,14 +273,15 @@ def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup, s3_p
         ocr_output_bucket.put_object(Key=s3_output_path, Body=out_fn.read_bytes())
 
 
-def clean_up(data_path, work_local_id=None):
+def clean_up(data_path, work_local_id=None, imagegroup=None):
     """
     delete all the images and output of the archived volume (imagegroup)
     """
-    if work_local_id:
-        work_image_path = data_path/IMAGES/work_local_id
+    if imagegroup:
+        vol_image_path = data_path/IMAGES/work_local_id/imagegroup
+        shutil.rmtree(str(vol_image_path))
+    elif work_local_id:
         work_output_path = data_path/OUTPUT/work_local_id
-        shutil.rmtree(str(work_image_path))
         shutil.rmtree(str(work_output_path))
     else:
         for path in data_path.iterdir():
@@ -336,6 +337,12 @@ def process_work(work):
                 s3_paths=s3_ocr_paths
             )
 
+            # delete the volume
+            clean_up(
+                DATA_PATH,
+                work_local_id=work_local_id,
+                imagegroup=vol_info['imagegroup']
+            )
         except:
             # create checkpoint
             save_check_point(imagegroup=vol_info['imagegroup'])
