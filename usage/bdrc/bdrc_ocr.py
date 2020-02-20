@@ -380,7 +380,7 @@ if __name__ == "__main__":
     if CHECK_POINT_FN.is_file():
         load_check_point()
     for workids_path in input_path.iterdir():
-        for work_id in get_work_ids(workids_path):
+        for i, work_id in enumerate(get_work_ids(workids_path)):
             if CHECK_POINT[WORK] and work_id in CHECK_POINT[WORK]: continue
             notifier(f'`[OCR]` _Work {work_id} processing ...._')
             try:
@@ -390,6 +390,14 @@ if __name__ == "__main__":
                 slack_notifier(f'`[ERROR] Error occured`\n{error}')
                 # slack_notifier('`[Restart]` *Restarting the script* ...')
                 # os.execv(sys.executable, ['python'] + sys.argv)
+                catalog.update_catalog()
+                sys.exit()
+
+            # update catalog every after 5 pecha
+            if i % 5 == 0:
+                catalog.update_catalog()
+                catalog = CatalogManager(formatter_type='ocr')
+
         notifier(f'[INFO] Completed {workids_path.name}')
 
     catalog.update_catalog()
