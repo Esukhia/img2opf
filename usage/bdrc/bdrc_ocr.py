@@ -388,8 +388,8 @@ if __name__ == "__main__":
             except Exception as ex:
                 error = f"`Here's the error: {ex}\nTraceback: {traceback.format_exc()}`"
                 slack_notifier(f'`[ERROR] Error occured`\n{error}')
-                slack_notifier('`[Restart]` *Restarting the script* ...')
-                os.execv(sys.executable, ['python'] + sys.argv)
+                # slack_notifier('`[Restart]` *Restarting the script* ...')
+                # os.execv(sys.executable, ['python'] + sys.argv)
         notifier(f'[INFO] Completed {workids_path.name}')
 
     catalog.update_catalog()
