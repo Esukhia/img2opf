@@ -9,6 +9,7 @@ from pathlib import Path
 import pytz
 import shutil
 import sys
+import traceback
 
 import boto3
 import botocore
@@ -291,6 +292,7 @@ def get_work_local_id(work):
 
 def process_work(work):
     work_local_id, work = get_work_local_id(work)
+    raise KeyError
 
     for i, vol_info in enumerate(get_volume_infos(work)):
         if CHECK_POINT[VOL] and vol_info['imagegroup'] < CHECK_POINT[VOL]: continue
@@ -362,7 +364,7 @@ def save_check_point(work=None, imagegroup=None):
 
 
 if __name__ == "__main__":
-    input_path = Path('Google-OCR/usage/bdrc/input')
+    input_path = Path('./usage/bdrc/input')
 
     notifier('`[Start]` *Google OCR is running* ...')
     if CHECK_POINT_FN.is_file():
@@ -373,8 +375,9 @@ if __name__ == "__main__":
             notifier(f'`[OCR]` _Work {work_id} processing ...._')
             try:
                 process_work(work_id)
-            except:
-                slack_notifier('`[ERROR] Error occured`')
+            except Exception as ex:
+                error = f"`Here's the error: {ex}\nTraceback: {traceback.format_exc()}`"
+                slack_notifier(f'`[ERROR] Error occured`\n{error}')
                 slack_notifier('`[Restart]` *Restarting the script* ...')
                 os.execv(sys.executable, ['python'] + sys.argv)
         notifier(f'[INFO] Completed {workids_path.name}')
