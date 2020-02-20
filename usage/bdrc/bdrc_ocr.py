@@ -390,7 +390,6 @@ if __name__ == "__main__":
                 slack_notifier(f'`[ERROR] Error occured`\n{error}')
                 # slack_notifier('`[Restart]` *Restarting the script* ...')
                 # os.execv(sys.executable, ['python'] + sys.argv)
-                catalog.update_catalog()
                 sys.exit()
 
             # update catalog every after 5 pecha
