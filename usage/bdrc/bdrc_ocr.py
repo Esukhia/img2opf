@@ -297,8 +297,10 @@ def get_work_local_id(work):
 
 def process_work(work):
     work_local_id, work = get_work_local_id(work)
+    is_work_empty = True
 
     for i, vol_info in enumerate(get_volume_infos(work)):
+        is_work_empty = False
         if CHECK_POINT[VOL] and vol_info['imagegroup'] < CHECK_POINT[VOL]: continue
 
         notifier(f'* Volume {vol_info["imagegroup"]} processing ....')
@@ -347,10 +349,12 @@ def process_work(work):
             # create checkpoint
             save_check_point(imagegroup=vol_info['imagegroup'])
             raise RuntimeError
-    catalog.ocr_to_opf(OCR_BASE_DIR/work_local_id)
-    clean_up(DATA_PATH, work_local_id=work_local_id)
-    clean_up(Path('./output'))
-    save_check_point(work=work_local_id)
+    
+    if not is_work_empty:
+        catalog.ocr_to_opf(OCR_BASE_DIR/work_local_id)
+        clean_up(DATA_PATH, work_local_id=work_local_id)
+        clean_up(Path('./output'))
+        save_check_point(work=work_local_id)
 
 
 def get_work_ids(fn):
