@@ -295,6 +295,9 @@ def get_work_local_id(work):
         return work, f'bdr:{work}'
 
 
+class OPFError(Exception):
+    pass
+
 def process_work(work):
     work_local_id, work = get_work_local_id(work)
     is_work_empty = True
@@ -349,12 +352,15 @@ def process_work(work):
             # create checkpoint
             save_check_point(imagegroup=vol_info['imagegroup'])
             raise RuntimeError
-    
+
     if not is_work_empty:
-        catalog.ocr_to_opf(OCR_BASE_DIR/work_local_id)
-        clean_up(DATA_PATH, work_local_id=work_local_id)
-        clean_up(Path('./output'))
-        save_check_point(work=work_local_id)
+        try: 
+            catalog.ocr_to_opf(OCR_BASE_DIR/work_local_id)
+            clean_up(DATA_PATH, work_local_id=work_local_id)
+            clean_up(Path('./output'))
+            save_check_point(work=work_local_id)
+        except:
+            raise OPFError
 
 
 def get_work_ids(fn):
@@ -377,6 +383,11 @@ def save_check_point(work=None, imagegroup=None):
     json.dump(CHECK_POINT, CHECK_POINT_FN.open('w'))
 
 
+def show_error(ex):
+    error = f"`Here's the error: {ex}\nTraceback: {traceback.format_exc()}`"
+    slack_notifier(f'`[ERROR] Error occured`\n{error}')
+
+
 if __name__ == "__main__":
     input_path = Path('Google-OCR/usage/bdrc/input')
 
@@ -389,11 +400,16 @@ if __name__ == "__main__":
             notifier(f'`[OCR]` _Work {work_id} processing ...._')
             try:
                 process_work(work_id)
+            except OPFError as ex:
+                show_error(ex)
+                catalog.batch.pop()
+                catalog.update_catalog()
+                sys.exit()
             except Exception as ex:
-                error = f"`Here's the error: {ex}\nTraceback: {traceback.format_exc()}`"
-                slack_notifier(f'`[ERROR] Error occured`\n{error}')
+                show_error(ex)
                 # slack_notifier('`[Restart]` *Restarting the script* ...')
                 # os.execv(sys.executable, ['python'] + sys.argv)
+                catalog.update_catalog()
                 sys.exit()
 
             # update catalog every after 5 pecha
