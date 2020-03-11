@@ -396,7 +396,7 @@ def load_check_point():
     CHECK_POINT[VOL] = check_point[VOL]
 
     if CHECK_POINT[VOL]:
-        last_work, last_vol = CHECK_POINT[VOl].split('-')
+        last_work, last_vol = CHECK_POINT[VOL].split('-')
 
 
 def save_check_point(work=None, imagegroup=None):
