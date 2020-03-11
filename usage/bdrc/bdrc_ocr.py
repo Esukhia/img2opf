@@ -324,7 +324,7 @@ def process_work(work):
         if last_work == work_local_id and vol_info['imagegroup'] < last_vol: continue
         is_work_empty = False
 
-        notifier(f'* Volume {vol_info["imagegroup"]} processing ....')
+        notifier(f'* `[Volume]` {vol_info["imagegroup"]} processing ....')
         try:
             # save all the images for a given vol
             save_images_for_vol(
@@ -415,13 +415,13 @@ def show_error(ex):
 if __name__ == "__main__":
     input_path = Path('Google-OCR/usage/bdrc/input')
 
-    notifier('`[Start]` *Google OCR is running* ...')
+    notifier('`[OCR]` *Google OCR is running* ...')
     if CHECK_POINT_FN.is_file():
         load_check_point()
     for workids_path in input_path.iterdir():
         for i, work_id in enumerate(get_work_ids(workids_path)):
             if CHECK_POINT[WORK] and work_id in CHECK_POINT[WORK]: continue
-            notifier(f'`[OCR]` _Work {work_id} processing ...._')
+            notifier(f'`[Work]` _Work {work_id} processing ...._')
             try:
                 process_work(work_id)
             except OPFError as ex:
