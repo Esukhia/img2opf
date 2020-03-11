@@ -425,8 +425,9 @@ if __name__ == "__main__":
 
             # update catalog every after 5 pecha
             if i % 5 == 0:
-                catalog.update_catalog()
-                catalog = CatalogManager(formatter_type='ocr')
+                if catalog.batch:
+                    catalog.update_catalog()
+                    catalog = CatalogManager(formatter_type='ocr')
 
         notifier(f'[INFO] Completed {workids_path.name}')
 
