@@ -372,6 +372,8 @@ def process_work(work):
             save_check_point(work=work_local_id)
         except:
             raise OPFError
+    else:
+        logging.warning(f'Empty work: {work_local_id}')
 
 
 def get_work_ids(fn):
