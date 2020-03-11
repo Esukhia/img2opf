@@ -57,6 +57,8 @@ CHECK_POINT = defaultdict(list)
 COLLECTION = 'collection'
 WORK = 'work'
 VOL = 'imagegroup'
+last_work = None
+last_vol = None
 
 # notifier config
 notifier = slack_notifier
@@ -318,7 +320,7 @@ def process_work(work):
     is_work_empty = True
 
     for i, vol_info in enumerate(get_volume_infos(work)):
-        if CHECK_POINT[VOL] and vol_info['imagegroup'] < CHECK_POINT[VOL]: continue
+        if last_work == work_local_id and vol_info['imagegroup'] < last_vol: continue
         is_work_empty = False
 
         notifier(f'* Volume {vol_info["imagegroup"]} processing ....')
@@ -365,7 +367,7 @@ def process_work(work):
             )
         except:
             # create checkpoint
-            save_check_point(imagegroup=vol_info['imagegroup'])
+            save_check_point(imagegroup=f"{work_local_id}-{vol_info['imagegroup']}")
             raise RuntimeError
 
     if not is_work_empty:
@@ -387,9 +389,13 @@ def get_work_ids(fn):
 
 
 def load_check_point():
+    global last_work, last_vol
     check_point = json.load(CHECK_POINT_FN.open())
     CHECK_POINT[WORK] = check_point[WORK]
     CHECK_POINT[VOL] = check_point[VOL]
+
+    if CHECK_POINT[VOL]:
+        last_work, last_vol = CHECK_POINT[VOl].split('-')
 
 
 def save_check_point(work=None, imagegroup=None):
