@@ -69,7 +69,7 @@ logging.basicConfig(
     filename='bdrc_ocr.log',
     format='%(asctime)s, %(levelname)s: %(message)s',
     datefmt='%m/%d/%Y %I:%M:%S %p',
-    level=logging.DEBUG
+    level=logging.INFO
 )
 
 
