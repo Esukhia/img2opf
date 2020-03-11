@@ -230,8 +230,11 @@ def apply_ocr_on_folder(images_base_dir, work_local_id, imagegroup, ocr_base_dir
     for img_fn in images_dir.iterdir():
         result_fn = ocr_output_dir/f'{img_fn.stem}.json.gz'
         if result_fn.is_file(): continue
-        result = get_text_from_image(str(img_fn))
-        gzip_result = gzip_str(result)
+        try:
+            result = get_text_from_image(str(img_fn))
+            gzip_result = gzip_str(result)
+        except:
+            logging.error(f'Google OCR issue: {result_fn}')
         result_fn.write_bytes(gzip_result)
 
 
