@@ -4,6 +4,7 @@ import gzip
 import hashlib
 import io
 import json
+import logging
 import os
 from pathlib import Path
 import pytz
@@ -62,6 +63,14 @@ notifier = slack_notifier
 
 # openpecha opf setup
 catalog = CatalogManager(formatter_type='ocr')
+
+# logging config
+logging.basicConfig(
+    filename='bdrc_ocr.log',
+    format='%(asctime)s, %(levelname)s: %(message)s',
+    datefmt='%m/%d/%Y %I:%M:%S %p',
+    level=logging.DEBUG
+)
 
 
 def get_value(json_node):
@@ -146,7 +155,7 @@ def get_s3_bits(s3path):
         return f
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == '404':
-            slack_notifier('The object does not exist.')
+            slack_notifier(f'`[Error]` The object does not exist, {s3path}')
         else:
             raise
     return
@@ -160,10 +169,13 @@ def save_file(bits, origfilename, imagegroup_output_dir):
     """
     imagegroup_output_dir.mkdir(exist_ok=True, parents=True)
     if origfilename.endswith('.tif'):
-        img = Image.open(bits)
-        output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
-        if output_fn.is_file(): return
-        img.save(str(output_fn))
+        try:
+            img = Image.open(bits)
+            output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
+            if output_fn.is_file(): return
+            img.save(str(output_fn))
+        except:
+            logging.error(f'Pillow issue: {output_fn}')
     else:
         output_fn = imagegroup_output_dir/origfilename
         if output_fn.is_file(): return
@@ -303,7 +315,6 @@ def process_work(work):
     is_work_empty = True
 
     for i, vol_info in enumerate(get_volume_infos(work)):
-        is_work_empty = False
         if CHECK_POINT[VOL] and vol_info['imagegroup'] < CHECK_POINT[VOL]: continue
 
         notifier(f'* Volume {vol_info["imagegroup"]} processing ....')
