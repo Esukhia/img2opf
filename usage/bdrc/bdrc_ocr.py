@@ -316,6 +316,7 @@ def process_work(work):
 
     for i, vol_info in enumerate(get_volume_infos(work)):
         if CHECK_POINT[VOL] and vol_info['imagegroup'] < CHECK_POINT[VOL]: continue
+        is_work_empty = False
 
         notifier(f'* Volume {vol_info["imagegroup"]} processing ....')
         try:
