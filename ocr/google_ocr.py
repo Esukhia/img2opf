@@ -1,5 +1,4 @@
 import argparse
-import base64
 import io
 import glob
 import os
@@ -18,12 +17,12 @@ def get_text_from_image(image):
     '''
     if isinstance(image, str):
         with io.open(image, 'rb') as image_file:
-            content = base64.b64encode(image_file.read())
+            content = image_file.read()
     else:
-        content = base64.b64encode(image)
-    image = types.Image(content=content)
+        content = image
+    ocr_image = types.Image(content=content)
 
-    response = vision_client.document_text_detection(image=image)
+    response = vision_client.document_text_detection(image=ocr_image)
     response_json = MessageToJson(response)
 
     return response_json
