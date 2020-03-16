@@ -317,6 +317,8 @@ class OPFError(Exception):
     pass
 
 def process_work(work):
+    notifier(f'`[Work]` _Work {work} processing ...._')
+
     work_local_id, work = get_work_local_id(work)
     is_work_empty = True
 
@@ -421,7 +423,6 @@ if __name__ == "__main__":
     for workids_path in input_path.iterdir():
         for i, work_id in enumerate(get_work_ids(workids_path)):
             if CHECK_POINT[WORK] and work_id in CHECK_POINT[WORK]: continue
-            notifier(f'`[Work]` _Work {work_id} processing ...._')
             try:
                 process_work(work_id)
             except OPFError as ex:
