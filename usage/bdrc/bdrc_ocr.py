@@ -185,12 +185,12 @@ def save_file(bits, origfilename, imagegroup_output_dir):
 
 
 def image_exists_locally(origfilename, imagegroup_output_dir):
-    # if origfilename.endswith('.tif'):
-    #     output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
-    #     if output_fn.is_file(): return True
-    # else:
-    #     output_fn = imagegroup_output_dir/origfilename
-    #     if output_fn.is_file(): return True
+    if origfilename.endswith('.tif'):
+        output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
+        if output_fn.is_file(): return True
+    else:
+        output_fn = imagegroup_output_dir/origfilename
+        if output_fn.is_file(): return True
 
     # ocr output is processed
     path_parts = list(imagegroup_output_dir.parts)
@@ -234,7 +234,7 @@ def apply_ocr_on_folder(images_base_dir, work_local_id, imagegroup, ocr_base_dir
     images_dir = images_base_dir/work_local_id/imagegroup
     ocr_output_dir = ocr_base_dir/work_local_id/imagegroup
     ocr_output_dir.mkdir(exist_ok=True, parents=True)
-
+    if not images_dir.is_dir(): return
     for img_fn in images_dir.iterdir():
         result_fn = ocr_output_dir/f'{img_fn.stem}.json.gz'
         if result_fn.is_file(): continue
@@ -284,17 +284,19 @@ def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup, s3_p
     
     # archive images
     images_dir = images_base_dir/work_local_id/imagegroup
-    for img_fn in images_dir.iterdir():
-        s3_image_path = f'{s3_paths[IMAGES]}/{img_fn.name}'
-        if is_archived(s3_image_path): continue
-        ocr_output_bucket.put_object(Key=s3_image_path, Body=img_fn.read_bytes())
+    if image_dir.is_dir():
+        for img_fn in images_dir.iterdir():
+            s3_image_path = f'{s3_paths[IMAGES]}/{img_fn.name}'
+            if is_archived(s3_image_path): continue
+            ocr_output_bucket.put_object(Key=s3_image_path, Body=img_fn.read_bytes())
     
     # archive ocr output
     ocr_output_dir = ocr_base_dir/work_local_id/imagegroup
-    for out_fn in ocr_output_dir.iterdir():
-        s3_output_path = f'{s3_paths[OUTPUT]}/{out_fn.name}'
-        if is_archived(s3_output_path): continue
-        ocr_output_bucket.put_object(Key=s3_output_path, Body=out_fn.read_bytes())
+    if ocr_output_dir.is_dir():
+        for out_fn in ocr_output_dir.iterdir():
+            s3_output_path = f'{s3_paths[OUTPUT]}/{out_fn.name}'
+            if is_archived(s3_output_path): continue
+            ocr_output_bucket.put_object(Key=s3_output_path, Body=out_fn.read_bytes())
 
 
 def clean_up(data_path, work_local_id=None, imagegroup=None):
