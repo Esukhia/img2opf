@@ -284,7 +284,7 @@ def archive_on_s3(images_base_dir, ocr_base_dir, work_local_id, imagegroup, s3_p
     
     # archive images
     images_dir = images_base_dir/work_local_id/imagegroup
-    if image_dir.is_dir():
+    if images_dir.is_dir():
         for img_fn in images_dir.iterdir():
             s3_image_path = f'{s3_paths[IMAGES]}/{img_fn.name}'
             if is_archived(s3_image_path): continue
@@ -305,10 +305,12 @@ def clean_up(data_path, work_local_id=None, imagegroup=None):
     """
     if imagegroup:
         vol_image_path = data_path/IMAGES/work_local_id/imagegroup
-        shutil.rmtree(str(vol_image_path))
+        if vol_image_path.is_dir():
+            shutil.rmtree(str(vol_image_path))
     elif work_local_id:
         work_output_path = data_path/OUTPUT/work_local_id
-        shutil.rmtree(str(work_output_path))
+        if work_output_path.is_dir():
+            shutil.rmtree(str(work_output_path))
     else:
         for path in data_path.iterdir():
             shutil.rmtree(str(path))
