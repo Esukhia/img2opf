@@ -449,7 +449,7 @@ if __name__ == "__main__":
                 sys.exit()
 
             # update catalog every after 5 pecha
-            if i % 5 == 0:
+            if i+1 % 5 == 0:
                 if catalog.batch:
                     catalog.update_catalog()
 
