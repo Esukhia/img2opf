@@ -185,12 +185,18 @@ def save_file(bits, origfilename, imagegroup_output_dir):
 
 
 def image_exists_locally(origfilename, imagegroup_output_dir):
-    if origfilename.endswith('.tif'):
-        output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
-        if output_fn.is_file(): return True
-    else:
-        output_fn = imagegroup_output_dir/origfilename
-        if output_fn.is_file(): return True
+    # if origfilename.endswith('.tif'):
+    #     output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
+    #     if output_fn.is_file(): return True
+    # else:
+    #     output_fn = imagegroup_output_dir/origfilename
+    #     if output_fn.is_file(): return True
+
+    # ocr output is processed
+    path_parts = list(imagegroup_output_dir.parts)
+    path_parts[1] = OUTPUT
+    output_fn = Path('/'.join(path_parts))/f'{origfilename.split(".")[0]}.json.gz'
+    if output_fn.is_file(): return True
 
     return False
 
@@ -380,6 +386,7 @@ def process_work(work):
             clean_up(Path('./output'))
             save_check_point(work=work_local_id)
         except:
+            save_check_point(imagegroup=f"{work_local_id}-{vol_info['imagegroup']}")
             raise OPFError
     else:
         logging.warning(f'Empty work: {work_local_id}')
