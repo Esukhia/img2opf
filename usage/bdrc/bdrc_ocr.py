@@ -452,7 +452,6 @@ if __name__ == "__main__":
             if i % 5 == 0:
                 if catalog.batch:
                     catalog.update_catalog()
-                    catalog = CatalogManager(formatter_type='ocr')
 
         notifier(f'[INFO] Completed {workids_path.name}')
 
