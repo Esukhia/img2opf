@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import pytz
 import shutil
+import socket
 import sys
 import traceback
 
@@ -422,7 +423,7 @@ def save_check_point(work=None, imagegroup=None):
 
 def show_error(ex):
     error = f"`Here's the error: {ex}\nTraceback: {traceback.format_exc()}`"
-    slack_notifier(f'`[ERROR] Error occured`\n{error}')
+    slack_notifier(f'`[ERROR] Error occured in {socket.gethostname()}`\n{error}')
 
 
 if __name__ == "__main__":
