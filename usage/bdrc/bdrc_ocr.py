@@ -67,7 +67,10 @@ last_vol = None
 notifier = slack_notifier
 
 # openpecha opf setup
-catalog = CatalogManager(formatter_type='ocr')
+catalog = CatalogManager(
+    formatter_type='ocr',
+    last_id_fn=f'{socket.gethostname()}_last_id'
+)
 
 # logging config
 logging.basicConfig(
