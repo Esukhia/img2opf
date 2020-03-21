@@ -7,3 +7,4 @@ dev/
 **/__pycache__/
 *.egg-info/
 archive/
+credentials/

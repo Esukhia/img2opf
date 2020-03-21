@@ -1,6 +1,6 @@
 # set up the env
-sudo apt update
-sudo apt install python3-pip
+sudo apt -y update
+sudo apt -y install python3-pip
 
 # install Google-OCR
 if [ -d Google-OCR ]; then

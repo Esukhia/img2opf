@@ -15,12 +15,14 @@ import traceback
 
 import boto3
 import botocore
+from github.GithubException import GithubException
 from PIL import Image
 import requests
 import rdflib
 from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, NamespaceManager
 from openpecha.catalog import CatalogManager
+from openpecha.github_utils import delete_repo
 
 from ocr.google_ocr import get_text_from_image
 from ocr.slack_notifier import slack_notifier
@@ -390,9 +392,9 @@ def process_work(work):
             clean_up(DATA_PATH, work_local_id=work_local_id)
             clean_up(Path('./output'))
             save_check_point(work=work_local_id)
-        except:
+        except GithubException as ex:
             save_check_point(imagegroup=f"{work_local_id}-{vol_info['imagegroup']}")
-            raise OPFError
+            raise GithubException(ex.status, ex.data)
     else:
         logging.warning(f'Empty work: {work_local_id}')
 
@@ -421,8 +423,11 @@ def save_check_point(work=None, imagegroup=None):
     json.dump(CHECK_POINT, CHECK_POINT_FN.open('w'))
 
 
-def show_error(ex):
-    error = f"`Here's the error: {ex}\nTraceback: {traceback.format_exc()}`"
+def show_error(ex, ex_type='ocr'):
+
+    error = f"`Here's the error: {ex}"
+    if ex_type == 'ocr':
+        error += f"\nTraceback: {traceback.format_exc()}`"
     slack_notifier(f'`[ERROR] Error occured in {socket.gethostname()}`\n{error}')
 
 
@@ -437,15 +442,15 @@ if __name__ == "__main__":
             if CHECK_POINT[WORK] and work_id in CHECK_POINT[WORK]: continue
             try:
                 process_work(work_id)
-            except OPFError as ex:
-                show_error(ex)
-                catalog.batch.pop()
+            except GithubException as ex:
+                show_error(ex, ex_type='github')
+                error_work = catalog.batch.pop()
                 catalog.update_catalog()
-                sys.exit()
+                delete_repo(error_work[0][1:8])
+                slack_notifier(f'`[Restart]` *{socket.gethostname()}* ...')
+                os.execv(f'{shutil.which("nohup")}',['nohup', 'sh', 'run.sh', '&'])
             except Exception as ex:
                 show_error(ex)
-                # slack_notifier('`[Restart]` *Restarting the script* ...')
-                # os.execv(sys.executable, ['python'] + sys.argv)
                 catalog.update_catalog()
                 sys.exit()
 
