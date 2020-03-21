@@ -451,19 +451,18 @@ if __name__ == "__main__":
             except GithubException as ex:
                 show_error(ex, ex_type='github')
                 error_work = catalog.batch.pop()
-                catalog.update_catalog()
-                delete_repo(error_work[0][1:8])
+                if catalog.batch: catalog.update_catalog()
+                if error_work: delete_repo(error_work[0][1:8])
                 slack_notifier(f'`[Restart]` *{HOSTNAME}* ...')
                 os.execv(f'{shutil.which("nohup")}',['nohup', 'sh', 'run.sh', '&'])
             except Exception as ex:
                 show_error(ex)
-                catalog.update_catalog()
+                if catalog.batch: catalog.update_catalog()
                 sys.exit()
 
             # update catalog every after 5 pecha
             if i+1 % 5 == 0:
-                if catalog.batch:
-                    catalog.update_catalog()
+                if catalog.batch: catalog.update_catalog()
 
         notifier(f'[INFO] Completed {workids_path.name}')
 
