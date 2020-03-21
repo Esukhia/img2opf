@@ -28,6 +28,9 @@ from ocr.google_ocr import get_text_from_image
 from ocr.slack_notifier import slack_notifier
 
 
+#Host config
+HOSTNAME = socket.gethostname()
+
 # S3 config
 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = "~/.aws/credentials"
 ARCHIVE_BUCKET = "archive.tbrc.org"
@@ -69,7 +72,7 @@ notifier = slack_notifier
 # openpecha opf setup
 catalog = CatalogManager(
     formatter_type='ocr',
-    last_id_fn=f'{socket.gethostname()}_last_id'
+    last_id_fn=f'{HOSTNAME}_last_id'
 )
 
 # logging config
@@ -333,7 +336,7 @@ class OPFError(Exception):
     pass
 
 def process_work(work):
-    notifier(f'`[Work]` _Work {work} processing ...._')
+    notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
 
     work_local_id, work = get_work_local_id(work)
     is_work_empty = True
@@ -342,7 +345,7 @@ def process_work(work):
         if last_work == work_local_id and vol_info['imagegroup'] < last_vol: continue
         is_work_empty = False
 
-        notifier(f'* `[Volume]` {vol_info["imagegroup"]} processing ....')
+        notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
         try:
             # save all the images for a given vol
             save_images_for_vol(
@@ -437,7 +440,7 @@ def show_error(ex, ex_type='ocr'):
 if __name__ == "__main__":
     input_path = Path('Google-OCR/usage/bdrc/input')
 
-    notifier('`[OCR]` *Google OCR is running* ...')
+    notifier(f'`[OCR-{HOSTNAME}]` *Google OCR is running* ...')
     if CHECK_POINT_FN.is_file():
         load_check_point()
     for workids_path in input_path.iterdir():
@@ -450,7 +453,7 @@ if __name__ == "__main__":
                 error_work = catalog.batch.pop()
                 catalog.update_catalog()
                 delete_repo(error_work[0][1:8])
-                slack_notifier(f'`[Restart]` *{socket.gethostname()}* ...')
+                slack_notifier(f'`[Restart]` *{HOSTNAME}* ...')
                 os.execv(f'{shutil.which("nohup")}',['nohup', 'sh', 'run.sh', '&'])
             except Exception as ex:
                 show_error(ex)
