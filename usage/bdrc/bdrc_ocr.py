@@ -166,7 +166,7 @@ def get_s3_bits(s3path):
         return f
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == '404':
-            logging.error('The object does not exist, {s3path}')
+            logging.error(f'The object does not exist, {s3path}')
         else:
             raise
     return
