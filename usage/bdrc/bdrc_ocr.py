@@ -461,8 +461,8 @@ if __name__ == "__main__":
                 sys.exit()
 
             # update catalog every after 5 pecha
-            if i+1 % 5 == 0:
-                if catalog.batch: catalog.update_catalog()
+            if len(catalog.batch) == 5:
+                catalog.update_catalog()
 
         notifier(f'[INFO] Completed {workids_path.name}')
 
