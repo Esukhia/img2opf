@@ -166,7 +166,7 @@ def get_s3_bits(s3path):
         return f
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == '404':
-            slack_notifier(f'`[Error]` The object does not exist, {s3path}')
+            logging.error('The object does not exist, {s3path}')
         else:
             raise
     return
@@ -221,7 +221,7 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
         if image_exists_locally(imageinfo['filename'], imagegroup_output_dir): continue
         s3path = s3prefix+"/"+imageinfo['filename']
         filebits = get_s3_bits(s3path)
-        save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
+        if filebits: save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
 
 
 def gzip_str(string_):
@@ -453,6 +453,10 @@ if __name__ == "__main__":
                 error_work = catalog.batch.pop()
                 if catalog.batch: catalog.update_catalog()
                 if error_work: delete_repo(error_work[0][1:8])
+                slack_notifier(f'`[Restart]` *{HOSTNAME}* ...')
+                os.execv(f'{shutil.which("nohup")}',['nohup', 'sh', 'run.sh', '&'])
+            except GeneratorExit:
+                if catalog.batch: catalog.update_catalog()
                 slack_notifier(f'`[Restart]` *{HOSTNAME}* ...')
                 os.execv(f'{shutil.which("nohup")}',['nohup', 'sh', 'run.sh', '&'])
             except Exception as ex:
