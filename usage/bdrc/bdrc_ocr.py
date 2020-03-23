@@ -187,7 +187,10 @@ def save_file(bits, origfilename, imagegroup_output_dir):
         img = Image.open(bits)
         img = ImageOps.autocontrast(img, cutoff=0.5)
     except:
-        logging.error(f'Pillow issue: {output_fn}')
+        if not bits.getvalue():
+            logging.error(f'Empty bytes: {output_fn}')
+        else:
+            logging.error(f'Pillow issue: {output_fn}')
         return
     img.save(str(output_fn))
 
