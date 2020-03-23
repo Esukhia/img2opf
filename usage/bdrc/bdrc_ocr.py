@@ -98,7 +98,7 @@ def get_s3_image_list(volume_prefix_url):
     """
     r = requests.get(f'https://iiifpres.bdrc.io/il/v:{volume_prefix_url}')
     if r.status_code != 200:
-        notifier(f"`[Error] error {r.status_code} when fetching volumes for {qname}`")
+        logging.error(f"Volume Images list Error: No images found for volume {volume_prefix_url}: status code: {r.status_code}")
         return
     return r.json()
 
@@ -117,7 +117,7 @@ def get_volume_infos(work_prefix_url):
     """
     r = requests.get(f'http://purl.bdrc.io/query/table/volumesForWork?R_RES={work_prefix_url}&format=json&pageSize=400')
     if r.status_code != 200:
-        slack_notifier(f"`[Error] error {r.status_code} when fetching volumes for {work_prefix_url}`")
+        logging.error(f"Volume Info Error: No info found for Volume {volume_prefix_url}: status code: {r.status_code}")
         return
     # the result of the query is already in ascending volume order
     res = r.json()
