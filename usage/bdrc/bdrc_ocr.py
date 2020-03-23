@@ -16,7 +16,7 @@ import traceback
 import boto3
 import botocore
 from github.GithubException import GithubException
-from PIL import Image
+from PIL import Image, ImageOps
 import requests
 import rdflib
 from rdflib import URIRef, Literal
