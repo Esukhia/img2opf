@@ -328,7 +328,7 @@ class OPFError(Exception):
     pass
 
 def process_work(work):
-    #notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
+    notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
 
     work_local_id, work = get_work_local_id(work)
     is_work_empty = True
@@ -337,7 +337,7 @@ def process_work(work):
         if last_work == work_local_id and vol_info['imagegroup'] < last_vol: continue
         is_work_empty = False
 
-        #notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
+        notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
         try:
             # save all the images for a given vol
             save_images_for_vol(
