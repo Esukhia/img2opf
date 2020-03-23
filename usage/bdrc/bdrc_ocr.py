@@ -121,7 +121,7 @@ def get_volume_infos(work_prefix_url):
             "vol_num": 1, 
             "volume_prefix_url": volume_prefix_url,
             "imagegroup": imagegroup,
-            "imagelist": vol_info[imagegroup]['imagelist']
+            "imagelist": vol_info[imagegroup]
             }
 
 
