@@ -33,7 +33,7 @@ HOSTNAME = socket.gethostname()
 
 # S3 config
 os.environ['AWS_SHARED_CREDENTIALS_FILE'] = "~/.aws/credentials"
-ARCHIVE_BUCKET = "archive.tbrc.org"
+ARCHIVE_BUCKET = "incoming.tbrc.org"
 OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
 S3 = boto3.resource('s3')
 S3_client = boto3.client('s3')
@@ -96,11 +96,8 @@ def get_s3_image_list(volume_prefix_url):
     returns the content of the dimension.json file for a volume ID, accessible at:
     https://iiifpres.bdrc.io/il/v:bdr:V22084_I0888 for volume ID bdr:V22084_I0888
     """
-    r = requests.get(f'https://iiifpres.bdrc.io/il/v:{volume_prefix_url}')
-    if r.status_code != 200:
-        notifier(f"`[Error] error {r.status_code} when fetching volumes for {qname}`")
-        return
-    return r.json()
+    for obj_summary in archive_bucket.objects.filter(Prefix=work_prefix_url):
+        yield Path(obj_summary.key)
 
 
 def get_volume_infos(work_prefix_url):
@@ -115,18 +112,17 @@ def get_volume_infos(work_prefix_url):
       ...
     ]
     """
-    r = requests.get(f'http://purl.bdrc.io/query/table/volumesForWork?R_RES={work_prefix_url}&format=json&pageSize=400')
-    if r.status_code != 200:
-        slack_notifier(f"`[Error] error {r.status_code} when fetching volumes for {work_prefix_url}`")
-        return
-    # the result of the query is already in ascending volume order
-    res = r.json()
-    for b in res["results"]["bindings"]:
-        volume_prefix_url = NSM.qname(URIRef(b["volid"]["value"]))
+    vol_info = defaultdict(list)
+    for obj_summary in archive_bucket.objects.filter(Prefix=work_prefix_url):
+        imagegroup = obj_summary.key.split('/')[-2].split('-')[-1]
+        vol_info[imagegroup].append(Path(obj_summary.key))
+
+    for imagegroup, volume_prefix_url in vol_info.items():
         yield {
-            "vol_num": get_value(b["volnum"]), 
-            "volume_prefix_url": get_value(b["volid"]),
-            "imagegroup": get_value(b["imggroup"])
+            "vol_num": 1, 
+            "volume_prefix_url": volume_prefix_url,
+            "imagegroup": imagegroup,
+            "imagelist": vol_info[imagegroup]['imagelist']
             }
 
 
@@ -210,18 +206,16 @@ def image_exists_locally(origfilename, imagegroup_output_dir):
     return False
 
 
-def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_base_dir):
+def save_images_for_vol(imagelist, work_local_id, imagegroup, images_base_dir):
     """
     this function gets the list of images of a volume and download all the images from s3.
     The output directory is output_base_dir/work_local_id/imagegroup
     """
-    s3prefix = get_s3_prefix_path(work_local_id, imagegroup)
-    for imageinfo in get_s3_image_list(volume_prefix_url):
+    for image_path in imagelist:
         imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
-        if image_exists_locally(imageinfo['filename'], imagegroup_output_dir): continue
-        s3path = s3prefix+"/"+imageinfo['filename']
-        filebits = get_s3_bits(s3path)
-        if filebits: save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
+        if image_exists_locally(image_path.name, imagegroup_output_dir): continue
+        filebits = get_s3_bits(str(image_path))
+        if filebits: save_file(filebits, image_path.name, imagegroup_output_dir)
 
 
 def gzip_str(string_):
@@ -336,20 +330,20 @@ class OPFError(Exception):
     pass
 
 def process_work(work):
-    notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
+    #notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
 
     work_local_id, work = get_work_local_id(work)
     is_work_empty = True
 
-    for i, vol_info in enumerate(get_volume_infos(work)):
+    for vol_info in get_volume_infos(f'scans/{work_local_id}/'):
         if last_work == work_local_id and vol_info['imagegroup'] < last_vol: continue
         is_work_empty = False
 
-        notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
+        #notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
         try:
             # save all the images for a given vol
             save_images_for_vol(
-                volume_prefix_url=vol_info['volume_prefix_url'],
+                imagelist=vol_info['imagelist'],
                 work_local_id=work_local_id,
                 imagegroup=vol_info['imagegroup'],
                 images_base_dir=IMAGES_BASE_DIR
