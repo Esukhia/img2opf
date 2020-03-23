@@ -99,7 +99,7 @@ def get_s3_image_list(volume_prefix_url):
     r = requests.get(f'https://iiifpres.bdrc.io/il/v:{volume_prefix_url}')
     if r.status_code != 200:
         logging.error(f"Volume Images list Error: No images found for volume {volume_prefix_url}: status code: {r.status_code}")
-        return
+        return {}
     return r.json()
 
 
