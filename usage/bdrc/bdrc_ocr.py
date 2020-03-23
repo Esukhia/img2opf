@@ -179,18 +179,17 @@ def save_file(bits, origfilename, imagegroup_output_dir):
     This may also apply some automatic treatment
     """
     imagegroup_output_dir.mkdir(exist_ok=True, parents=True)
+    output_fn = imagegroup_output_dir/origfilename
     if origfilename.endswith('.tif'):
-        try:
-            img = Image.open(bits)
-            output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
-            if output_fn.is_file(): return
-            img.save(str(output_fn))
-        except:
-            logging.error(f'Pillow issue: {output_fn}')
-    else:
-        output_fn = imagegroup_output_dir/origfilename
-        if output_fn.is_file(): return
-        output_fn.write_bytes(bits.getbuffer())
+        output_fn = imagegroup_output_dir/f'{origfilename.split(".")[0]}.png'
+    if output_fn.is_file(): return
+    try:
+        img = Image.open(bits)
+        img = ImageOps.autocontrast(img, cutoff=0.5)
+    except:
+        logging.error(f'Pillow issue: {output_fn}')
+        return
+    img.save(str(output_fn))
 
 
 def image_exists_locally(origfilename, imagegroup_output_dir):
