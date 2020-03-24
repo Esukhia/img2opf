@@ -193,7 +193,12 @@ def save_file(bits, origfilename, imagegroup_output_dir):
         else:
             logging.error(f'Pillow issue: {output_fn}')
         return
-    img.save(str(output_fn))
+
+    try:
+        img.save(str(output_fn))
+    except:
+        logging.error(f'Error in saving: {output_fn} : origfilename: {origfilename}')
+        return
 
 
 def image_exists_locally(origfilename, imagegroup_output_dir):
@@ -339,6 +344,7 @@ class OPFError(Exception):
     pass
 
 def process_work(work):
+    last_work, last_vol = 'W25102', 'I3861'
     notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
 
     work_local_id, work = get_work_local_id(work)
