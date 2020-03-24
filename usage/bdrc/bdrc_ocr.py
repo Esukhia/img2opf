@@ -83,6 +83,11 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+# Debug config
+DEBUG = {
+    'status': False
+}
+
 
 def get_value(json_node):
     if json_node['type'] == 'literal':
@@ -225,6 +230,7 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
     """
     s3prefix = get_s3_prefix_path(work_local_id, imagegroup)
     for imageinfo in get_s3_image_list(volume_prefix_url):
+        if DEBUG['status'] and not imageinfo['filename'].split('.')[0] == 'I1PD274160048': continue
         imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
         if image_exists_locally(imageinfo['filename'], imagegroup_output_dir): continue
         s3path = s3prefix+"/"+imageinfo['filename']
@@ -344,8 +350,9 @@ class OPFError(Exception):
     pass
 
 def process_work(work):
-    last_work, last_vol = 'W25102', 'I3861'
-    notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
+    if DEBUG['status']: last_work, last_vol = 'W29621', 'I1PD27416'
+
+    if not DEBUG['status']: notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
 
     work_local_id, work = get_work_local_id(work)
     is_work_empty = True
@@ -354,7 +361,7 @@ def process_work(work):
         if last_work == work_local_id and vol_info['imagegroup'] < last_vol: continue
         is_work_empty = False
 
-        notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
+        if not DEBUG['status']: notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
         try:
             # save all the images for a given vol
             save_images_for_vol(
