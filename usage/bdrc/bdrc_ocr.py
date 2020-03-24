@@ -180,7 +180,8 @@ def save_file(bits, origfilename, imagegroup_output_dir):
     if output_fn.is_file(): return
     try:
         img = Image.open(bits)
-        img = ImageOps.autocontrast(img, cutoff=0.5)
+        if len(img.size) > 2:
+            img = ImageOps.autocontrast(img, cutoff=0.5)
     except:
         logging.error(f'Pillow issue: {output_fn}')
         return
