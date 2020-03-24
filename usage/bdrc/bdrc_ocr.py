@@ -117,7 +117,7 @@ def get_volume_infos(work_prefix_url):
     """
     r = requests.get(f'http://purl.bdrc.io/query/table/volumesForWork?R_RES={work_prefix_url}&format=json&pageSize=400')
     if r.status_code != 200:
-        logging.error(f"Volume Info Error: No info found for Volume {volume_prefix_url}: status code: {r.status_code}")
+        logging.error(f"Volume Info Error: No info found for Work {work_prefix_url}: status code: {r.status_code}")
         return
     # the result of the query is already in ascending volume order
     res = r.json()
@@ -185,7 +185,8 @@ def save_file(bits, origfilename, imagegroup_output_dir):
     if output_fn.is_file(): return
     try:
         img = Image.open(bits)
-        img = ImageOps.autocontrast(img, cutoff=0.5)
+        if len(img.size) > 2:
+            img = ImageOps.autocontrast(img, cutoff=0.5)
     except:
         if not bits.getvalue():
             logging.error(f'Empty bytes: {output_fn}')
