@@ -343,7 +343,7 @@ class OPFError(Exception):
     pass
 
 def process_work(work):
-    if DEBUG['status']: last_work, last_vol = 'W29621', 'I1PD27416'
+    # if DEBUG['status']: last_work, last_vol = 'W29621', 'I1PD27416'
 
     if not DEBUG['status']: notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
 
