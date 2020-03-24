@@ -82,6 +82,11 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+# Debug config
+DEBUG = {
+    'status': False
+}
+
 
 def get_value(json_node):
     if json_node['type'] == 'literal':
@@ -183,9 +188,17 @@ def save_file(bits, origfilename, imagegroup_output_dir):
         if len(img.size) > 2:
             img = ImageOps.autocontrast(img, cutoff=0.5)
     except:
-        logging.error(f'Pillow issue: {output_fn}')
+        if not bits.getvalue():
+            logging.error(f'Empty bytes: {output_fn}')
+        else:
+            logging.error(f'Pillow issue: {output_fn}')
         return
-    img.save(str(output_fn))
+
+    try:
+        img.save(str(output_fn))
+    except:
+        logging.error(f'Error in saving: {output_fn} : origfilename: {origfilename}')
+        return
 
 
 def image_exists_locally(origfilename, imagegroup_output_dir):
@@ -211,6 +224,7 @@ def save_images_for_vol(imagelist, work_local_id, imagegroup, images_base_dir):
     The output directory is output_base_dir/work_local_id/imagegroup
     """
     for image_path in imagelist:
+        if DEBUG['status'] and not image_path.name.split('.')[0] == 'I1PD274160048': continue
         imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
         if image_exists_locally(image_path.name, imagegroup_output_dir): continue
         filebits = get_s3_bits(str(image_path))
@@ -329,7 +343,9 @@ class OPFError(Exception):
     pass
 
 def process_work(work):
-    notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
+    if DEBUG['status']: last_work, last_vol = 'W29621', 'I1PD27416'
+
+    if not DEBUG['status']: notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
 
     work_local_id, work = get_work_local_id(work)
     is_work_empty = True
@@ -338,7 +354,7 @@ def process_work(work):
         if last_work == work_local_id and vol_info['imagegroup'] < last_vol: continue
         is_work_empty = False
 
-        notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
+        if not DEBUG['status']: notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
         try:
             # save all the images for a given vol
             save_images_for_vol(
