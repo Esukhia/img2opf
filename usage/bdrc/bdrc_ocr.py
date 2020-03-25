@@ -360,7 +360,9 @@ def process_work(work):
     is_work_empty = True
 
     for i, vol_info in enumerate(get_volume_infos(work)):
-        if last_work == work_local_id and vol_info['imagegroup'] != last_vol: continue
+        if last_work == work_local_id and \
+            len(vol_info['imagegroup']) == len(last_vol) and \
+                vol_info['imagegroup'] < last_vol: continue
         is_work_empty = False
 
         if not DEBUG['status']: notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
