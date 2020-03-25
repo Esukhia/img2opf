@@ -421,6 +421,9 @@ def process_work(work):
         except GithubException as ex:
             save_check_point(imagegroup=f"{work_local_id}-{vol_info['imagegroup']}")
             raise GithubException(ex.status, ex.data)
+        except GeneratorExit:
+            save_check_point(imagegroup=f"{work_local_id}-{vol_info['imagegroup']}")
+            raise OPFError
     else:
         logging.warning(f'Empty work: {work_local_id}')
 
@@ -475,7 +478,7 @@ if __name__ == "__main__":
                 if error_work: delete_repo(error_work[0][1:8])
                 slack_notifier(f'`[Restart]` *{HOSTNAME}* ...')
                 os.execv(f'{shutil.which("nohup")}',['nohup', 'sh', 'run.sh', '&'])
-            except GeneratorExit:
+            except OPFError:
                 if catalog.batch: catalog.update_catalog()
                 slack_notifier(f'`[Restart]` *{HOSTNAME}* ...')
                 os.execv(f'{shutil.which("nohup")}',['nohup', 'sh', 'run.sh', '&'])
