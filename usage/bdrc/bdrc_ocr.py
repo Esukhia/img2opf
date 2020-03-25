@@ -1,3 +1,5 @@
+import faulthandler; faulthandler.enable()
+
 from collections import defaultdict
 from datetime import datetime
 import gzip
