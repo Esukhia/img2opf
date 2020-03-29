@@ -232,7 +232,7 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
     """
     s3prefix = get_s3_prefix_path(work_local_id, imagegroup)
     for imageinfo in get_s3_image_list(volume_prefix_url):
-        if DEBUG['status'] and not imageinfo['filename'].split('.')[0] == 'I1CZ27550001': continue
+        if DEBUG['status'] and not imageinfo['filename'].split('.')[0] == 'I1KG35630002': continue
         imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
         if image_exists_locally(imageinfo['filename'], imagegroup_output_dir): continue
         s3path = s3prefix+"/"+imageinfo['filename']
@@ -353,19 +353,23 @@ class OPFError(Exception):
 
 def process_work(work):
     global last_work,  last_vol
-    
-    if DEBUG['status']: last_work, last_vol = work, 'I1KG13692'
 
-    if not DEBUG['status']: notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
-
+    if DEBUG['status']: last_work, last_vol = work, 'I1KG3563'
     work_local_id, work = get_work_local_id(work)
-    is_work_empty = True
 
+    is_work_empty = True
+    is_start_work = True
     for i, vol_info in enumerate(get_volume_infos(work)):
         if last_work == work_local_id and \
             len(vol_info['imagegroup']) == len(last_vol) and \
                 vol_info['imagegroup'] < last_vol: continue
+
         is_work_empty = False
+
+        # log work info at 1st vol
+        if is_start_work and not DEBUG['status']:
+            notifier(f'`[Work-{HOSTNAME}]` _Work {work} processing ...._')
+            is_start_work = False
 
         if not DEBUG['status']: notifier(f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....')
         try:
