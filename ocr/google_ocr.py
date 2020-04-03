@@ -43,7 +43,7 @@ if __name__ == "__main__":
     output_path = Path(args.output_dir)
     output_path.mkdir(exist_ok=True, parents=True)
 
-    fns = list(input_path.iterdir())
+    fns = [fn for fn in input_path.iterdir() if fn.suffix in ['.png', '.jpg', '.jpeg']]
     if args.combine_output:
         fns = sorted(fns)
 
