@@ -1,7 +1,5 @@
-import argparse
 import io
-import glob
-import os
+from pathlib import Path
 
 from google.cloud import vision
 from google.cloud.vision import types
@@ -15,7 +13,7 @@ def get_text_from_image(image):
     image: file_path or image bytes
     return: google ocr response in Json
     '''
-    if isinstance(image, str):
+    if isinstance(image, (str, Path)):
         with io.open(image, 'rb') as image_file:
             content = image_file.read()
     else:
@@ -23,33 +21,45 @@ def get_text_from_image(image):
     ocr_image = types.Image(content=content)
 
     response = vision_client.document_text_detection(image=ocr_image)
-    response_json = MessageToJson(response)
+    response_json_str = MessageToJson(response)
 
-    return response_json
+    return eval(response_json_str)
 
 
 if __name__ == "__main__":
 
+    import argparse
     from tqdm import tqdm
 
     ap = argparse.ArgumentParser(add_help=False)
     ap.add_argument("--input_dir", type=str, help="directory path containing all the images")
     ap.add_argument("--n", type=int, help="start page number", default=1)
-    ap.add_argument("--output_dir")
-
+    ap.add_argument("--output_dir", default='./output', help='output_dir to store the ocr output')
+    ap.add_argument("--combine_output",  action="store_true", help="Combine the output of all the images in input_dir")
     args = ap.parse_args()
 
-    fns = sorted([o for o in glob.glob(args.input_dir + '/*') if o.endswith('.png')])
+    print('[INFO] OCR started ....')
+    input_path = Path(args.input_dir)
+    output_path = Path(args.output_dir)
+    output_path.mkdir(exist_ok=True, parents=True)
 
-    output_dir = os.path.join("output", args.output_dir)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    fns = list(input_path.iterdir())
+    if args.combine_output:
+        fns = sorted(fns)
 
-    vol_texts = []
+    texts = []
     for fn in tqdm(fns[args.n-1:]):
-        text = get_text_from_image(fn)
-        vol_texts.append(text[0].description)
-    
-    output_fn = os.path.join(output_dir, 'ocr_output.txt')
-    with open(output_fn, 'w') as f:
-        f.write('\n\n'.join(vol_texts))
+        response = get_text_from_image(fn)
+        text = response['textAnnotations'][0]['description']
+        if not args.combine_output:
+            output_fn = output_path/f'{fn.stem}.txt'
+            output_fn.write_text(text)
+        else:
+            texts.append(text)
+
+    if args.combine_output and texts:
+        output_fn = output_path/f'{input_path.name}.txt'
+        output_fn.write_text('\n\n\n'.join(texts))
+        print('[INFO] Output is saved at:', str(output_fn))
+    else:
+        print('INFO]  Output is saved at:', str(output_path))
