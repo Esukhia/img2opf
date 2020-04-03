@@ -31,11 +31,11 @@ if __name__ == "__main__":
     import argparse
     from tqdm import tqdm
 
-    ap = argparse.ArgumentParser(add_help=False)
+    ap = argparse.ArgumentParser()
     ap.add_argument("--input_dir", type=str, help="directory path containing all the images")
     ap.add_argument("--n", type=int, help="start page number", default=1)
-    ap.add_argument("--output_dir", default='./output', help='output_dir to store the ocr output')
-    ap.add_argument("--combine_output",  action="store_true", help="Combine the output of all the images in input_dir")
+    ap.add_argument("--output_dir", default='./output', help='directory to store the ocr output')
+    ap.add_argument("--combine",  action="store_true", help="Combine the output of all the images in output_dir")
     args = ap.parse_args()
 
     print('[INFO] OCR started ....')
