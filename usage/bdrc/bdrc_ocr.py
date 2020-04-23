@@ -73,8 +73,7 @@ notifier = slack_notifier
 
 # openpecha opf setup
 catalog = CatalogManager(
-    formatter_type='ocr',
-    last_id_fn=f'{HOSTNAME}_last_id'
+    formatter_type='ocr'
 )
 
 # logging config
@@ -163,13 +162,13 @@ def get_s3_prefix_path(work_local_id, imagegroup, service=None, batch_prefix=Non
     return f'{base_dir}/images/{work_local_id}-{suffix}'
 
 
-def get_s3_bits(s3path):
+def get_s3_bits(s3path, bucket):
     """
     get the s3 binary data in memory
     """
     f = io.BytesIO()
     try:
-        archive_bucket.download_fileobj(s3path, f)
+        bucket.download_fileobj(s3path, f)
         return f
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == '404':
@@ -236,7 +235,7 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
         imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
         if image_exists_locally(imageinfo['filename'], imagegroup_output_dir): continue
         s3path = s3prefix+"/"+imageinfo['filename']
-        filebits = get_s3_bits(s3path)
+        filebits = get_s3_bits(s3path, archive_bucket)
         if filebits: save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
 
 
