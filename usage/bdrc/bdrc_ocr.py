@@ -231,10 +231,11 @@ def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_bas
     """
     s3prefix = get_s3_prefix_path(work_local_id, imagegroup)
     for imageinfo in get_s3_image_list(volume_prefix_url):
-        if DEBUG['status'] and not imageinfo['filename'].split('.')[0] == 'I1KG35630002': continue
+        # if DEBUG['status'] and not imageinfo['filename'].split('.')[0] == 'I1KG35630002': continue
         imagegroup_output_dir = images_base_dir/work_local_id/imagegroup
         if image_exists_locally(imageinfo['filename'], imagegroup_output_dir): continue
         s3path = s3prefix+"/"+imageinfo['filename']
+        if DEBUG['status']: print(f'\t- downloading {imageinfo["filename"]}')
         filebits = get_s3_bits(s3path, archive_bucket)
         if filebits: save_file(filebits, imageinfo['filename'], imagegroup_output_dir)
 
