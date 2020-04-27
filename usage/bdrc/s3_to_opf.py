@@ -41,7 +41,7 @@ def download_ocr_output_for_vol(volume_prefix_url, work_local_id, imagegroup, oc
         if filebits: save_json_output(filebits, ocr_json_fn, ocr_output_dir)
 
 
-def process_work(work):
+def process_work(work, vols=None):
     work_local_id, work = get_work_local_id(work)
 
     is_work_empty = True
@@ -49,23 +49,26 @@ def process_work(work):
         is_work_empty = False
         print(f'[INFO] {vol_info["imagegroup"]} processing ....')
 
-        # save_images_for_vol(
-        #     volume_prefix_url=vol_info['volume_prefix_url'],
-        #     work_local_id=work_local_id,
-        #     imagegroup=vol_info['imagegroup'],
-        #     images_base_dir=IMAGES_BASE_DIR
-        # )
+        if vols and vol_info["imagegroup"] not in vols: continue
 
-        download_ocr_output_for_vol(
+        save_images_for_vol(
             volume_prefix_url=vol_info['volume_prefix_url'],
             work_local_id=work_local_id,
             imagegroup=vol_info['imagegroup'],
-             ocr_base_dir=OCR_BASE_DIR
+            images_base_dir=IMAGES_BASE_DIR
         )
+
+        # download_ocr_output_for_vol(
+        #     volume_prefix_url=vol_info['volume_prefix_url'],
+        #     work_local_id=work_local_id,
+        #     imagegroup=vol_info['imagegroup'],
+        #      ocr_base_dir=OCR_BASE_DIR
+        # )
 
     if not is_work_empty:
         catalog.ocr_to_opf(OCR_BASE_DIR/work_local_id)
 
 
 if __name__ == "__main__":
-    process_work('W1PD95844')
+    # process_work('W1PD95844')
+    process_work('W1PD96682', ['I1PD96856', 'I1PD96856'])
