@@ -50,6 +50,7 @@ if __name__ == "__main__":
     texts = []
     for fn in tqdm(fns[args.n-1:]):
         response = get_text_from_image(fn)
+        if 'textAnnotations' not in response: continue
         text = response['textAnnotations'][0]['description']
         if not args.combine:
             output_fn = output_path/f'{fn.stem}.txt'
