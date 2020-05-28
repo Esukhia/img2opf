@@ -57,7 +57,7 @@ if __name__ == "__main__":
         else:
             texts.append(text)
 
-    if args.combine_output and texts:
+    if args.combine and texts:
         output_fn = output_path/f'{input_path.name}.txt'
         output_fn.write_text('\n\n\n'.join(texts))
         print('[INFO] Output is saved at:', str(output_fn))
