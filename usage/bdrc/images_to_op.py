@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 from pathlib import Path
 
 from openpecha.catalog import CatalogManager
@@ -8,6 +9,13 @@ from bdrc_ocr import gzip_str
 from ocr.google_ocr import get_text_from_image
 
 catalog = CatalogManager(formatter_type="ocr")
+
+logging.basicConfig(
+    filename=f"{__file__}.log",
+    format="%(asctime)s, %(levelname)s: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+    level=logging.INFO,
+)
 
 
 def apply_ocr_on_folder(images_dir, ocr_base_dir):
@@ -38,7 +46,7 @@ def images2opf(images_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Images to OpenPecha")
-    parser.add_argument("--input", "-o", help="path to images")
+    parser.add_argument("--input", "-o", help="path to images"),
     args = parser.parse_args()
 
     images2opf(args.input)
