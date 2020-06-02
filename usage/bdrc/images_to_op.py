@@ -42,6 +42,7 @@ def apply_ocr_on_folder(images_dir, ocr_base_dir):
 def images2opf(images_path):
     ocr_output_dir = apply_ocr_on_folder(Path(images_path), Path("./archive"))
     catalog.ocr_to_opf(ocr_output_dir)
+    catalog.update_catalog()
 
 
 if __name__ == "__main__":
