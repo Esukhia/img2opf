@@ -44,20 +44,21 @@ if __name__ == "__main__":
     output_path.mkdir(exist_ok=True, parents=True)
 
     fns = [fn for fn in input_path.iterdir() if fn.suffix in ['.png', '.jpg', '.jpeg']]
-    if args.combine_output:
+    if args.combine:
         fns = sorted(fns)
 
     texts = []
     for fn in tqdm(fns[args.n-1:]):
         response = get_text_from_image(fn)
+        if 'textAnnotations' not in response: continue
         text = response['textAnnotations'][0]['description']
-        if not args.combine_output:
+        if not args.combine:
             output_fn = output_path/f'{fn.stem}.txt'
             output_fn.write_text(text)
         else:
             texts.append(text)
 
-    if args.combine_output and texts:
+    if args.combine and texts:
         output_fn = output_path/f'{input_path.name}.txt'
         output_fn.write_text('\n\n\n'.join(texts))
         print('[INFO] Output is saved at:', str(output_fn))
