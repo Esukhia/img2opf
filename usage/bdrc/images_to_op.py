@@ -19,7 +19,7 @@ logging.basicConfig(
 
 
 def apply_ocr_on_folder(images_dir, ocr_base_dir):
-    ocr_output_dir = ocr_base_dir / images_dir.name
+    ocr_output_dir = ocr_base_dir / images_dir.name / images_dir.name
     ocr_output_dir.mkdir(exist_ok=True, parents=True)
     if not images_dir.is_dir():
         return
@@ -36,7 +36,7 @@ def apply_ocr_on_folder(images_dir, ocr_base_dir):
         gzip_result = gzip_str(result)
         result_fn.write_bytes(gzip_result)
 
-    return ocr_output_dir
+    return ocr_output_dir.parent
 
 
 def images2opf(images_path):
