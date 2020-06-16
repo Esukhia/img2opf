@@ -30,61 +30,61 @@ from ocr.slack_notifier import slack_notifier
 
 faulthandler.enable()
 
-if __name__ == "__main__":
-    # Host config
-    HOSTNAME = socket.gethostname()
 
-    # S3 config
-    os.environ["AWS_SHARED_CREDENTIALS_FILE"] = "~/.aws/credentials"
-    ARCHIVE_BUCKET = "archive.tbrc.org"
-    OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
-    S3 = boto3.resource("s3")
-    S3_client = boto3.client("s3")
-    archive_bucket = S3.Bucket(ARCHIVE_BUCKET)
-    ocr_output_bucket = S3.Bucket(OCR_OUTPUT_BUCKET)
+# Host config
+HOSTNAME = socket.gethostname()
 
-    # URI config
-    BDR = Namespace("http://purl.bdrc.io/resource/")
-    NSM = NamespaceManager(rdflib.Graph())
-    NSM.bind("bdr", BDR)
+# S3 config
+os.environ["AWS_SHARED_CREDENTIALS_FILE"] = "~/.aws/credentials"
+ARCHIVE_BUCKET = "archive.tbrc.org"
+OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
+S3 = boto3.resource("s3")
+S3_client = boto3.client("s3")
+archive_bucket = S3.Bucket(ARCHIVE_BUCKET)
+ocr_output_bucket = S3.Bucket(OCR_OUTPUT_BUCKET)
 
-    # s3 bucket directory config
-    SERVICE = "vision"
-    BATCH_PREFIX = "batch"
-    IMAGES = "images"
-    OUTPUT = "output"
-    INFO_FN = "info.json"
+# URI config
+BDR = Namespace("http://purl.bdrc.io/resource/")
+NSM = NamespaceManager(rdflib.Graph())
+NSM.bind("bdr", BDR)
 
-    # local directory config
-    DATA_PATH = Path("./archive")
-    IMAGES_BASE_DIR = DATA_PATH / IMAGES
-    OCR_BASE_DIR = DATA_PATH / OUTPUT
-    CHECK_POINT_FN = DATA_PATH / "checkpoint.json"
+# s3 bucket directory config
+SERVICE = "vision"
+BATCH_PREFIX = "batch"
+IMAGES = "images"
+OUTPUT = "output"
+INFO_FN = "info.json"
 
-    # Checkpoint config
-    CHECK_POINT = defaultdict(list)
-    COLLECTION = "collection"
-    WORK = "work"
-    VOL = "imagegroup"
-    last_work = None
-    last_vol = None
+# local directory config
+DATA_PATH = Path("./archive")
+IMAGES_BASE_DIR = DATA_PATH / IMAGES
+OCR_BASE_DIR = DATA_PATH / OUTPUT
+CHECK_POINT_FN = DATA_PATH / "checkpoint.json"
 
-    # notifier config
-    notifier = slack_notifier
+# Checkpoint config
+CHECK_POINT = defaultdict(list)
+COLLECTION = "collection"
+WORK = "work"
+VOL = "imagegroup"
+last_work = None
+last_vol = None
 
-    # openpecha opf setup
-    catalog = CatalogManager(formatter_type="ocr")
+# notifier config
+notifier = slack_notifier
 
-    # logging config
-    logging.basicConfig(
-        filename="bdrc_ocr.log",
-        format="%(asctime)s, %(levelname)s: %(message)s",
-        datefmt="%m/%d/%Y %I:%M:%S %p",
-        level=logging.INFO,
-    )
+# openpecha opf setup
+catalog = CatalogManager(formatter_type="ocr")
 
-    # Debug config
-    DEBUG = {"status": False}
+# logging config
+logging.basicConfig(
+    filename="bdrc_ocr.log",
+    format="%(asctime)s, %(levelname)s: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+    level=logging.INFO,
+)
+
+# Debug config
+DEBUG = {"status": False}
 
 
 def get_value(json_node):
