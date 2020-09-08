@@ -36,6 +36,7 @@ ARCHIVE_BUCKET = "incoming.tbrc.org"
 OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
 S3 = boto3.resource("s3")
 S3_client = boto3.client("s3")
+paginator = S3_client.get_paginator("list_objects")
 archive_bucket = S3.Bucket(ARCHIVE_BUCKET)
 ocr_output_bucket = S3.Bucket(OCR_OUTPUT_BUCKET)
 
@@ -99,7 +100,7 @@ def get_s3_image_list(volume_prefix_url):
         yield Path(obj_summary.key)
 
 
-def get_volume_infos(work_prefix_url, filters):
+def get_volume_infos(work_prefix_url):
     """
     the input is something like bdr:W22084, the output is a list like:
     [
@@ -112,20 +113,21 @@ def get_volume_infos(work_prefix_url, filters):
     ]
     """
     vol_info = defaultdict(list)
-    for obj_summary in archive_bucket.objects.filter(
-        Prefix=f"scans/{work_prefix_url}/ocr-source-images"
-    ):
-        imagegroup = obj_summary.key.split("/")[-2].split("-")[-1]
-        if imagegroup > filters["till"]:
-            break
-        if imagegroup in filters["skip"]:
-            continue
-        vol_info[imagegroup].append(Path(obj_summary.key))
+    operation_parameters = {
+        "Bucket": ARCHIVE_BUCKET,
+        "Prefix": f"scans/{work_prefix_url}/ocr-source-images",
+    }
+    page_iterator = paginator.paginate(**operation_parameters)
+    for page in page_iterator:
+        for obj_summary in page["Contents"]:
+            obj_key = obj_summary["Key"]
+            print(obj_key)
+            imagegroup = obj_key.split("/")[-2].split("-")[-1]
+            vol_info[imagegroup].append(Path(obj_key))
 
-    for imagegroup, volume_prefix_url in vol_info.items():
+    for imagegroup in vol_info:
         yield {
             "vol_num": 1,
-            "volume_prefix_url": volume_prefix_url,
             "imagegroup": imagegroup,
             "imagelist": vol_info[imagegroup],
         }
