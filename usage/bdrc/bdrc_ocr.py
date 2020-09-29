@@ -19,14 +19,13 @@ import pytz
 import rdflib
 import requests
 from github.GithubException import GithubException
+from ocr.google_ocr import get_text_from_image
+from ocr.slack_notifier import slack_notifier
 from openpecha.catalog import CatalogManager
 from openpecha.github_utils import delete_repo
 from PIL import Image, ImageOps
 from rdflib import Literal, URIRef
 from rdflib.namespace import Namespace, NamespaceManager
-
-from ocr.google_ocr import get_text_from_image
-from ocr.slack_notifier import slack_notifier
 
 faulthandler.enable()
 
@@ -40,6 +39,7 @@ ARCHIVE_BUCKET = "archive.tbrc.org"
 OCR_OUTPUT_BUCKET = "ocr.bdrc.io"
 S3 = boto3.resource("s3")
 S3_client = boto3.client("s3")
+paginator = S3_client.get_paginator("list_objects")
 archive_bucket = S3.Bucket(ARCHIVE_BUCKET)
 ocr_output_bucket = S3.Bucket(OCR_OUTPUT_BUCKET)
 
@@ -70,7 +70,7 @@ last_work = None
 last_vol = None
 
 # notifier config
-notifier = slack_notifier
+# notifier = slack_notifier
 
 # openpecha opf setup
 catalog = CatalogManager(formatter_type="ocr")
@@ -99,13 +99,8 @@ def get_s3_image_list(volume_prefix_url):
     returns the content of the dimension.json file for a volume ID, accessible at:
     https://iiifpres.bdrc.io/il/v:bdr:V22084_I0888 for volume ID bdr:V22084_I0888
     """
-    r = requests.get(f"https://iiifpres.bdrc.io/il/v:{volume_prefix_url}")
-    if r.status_code != 200:
-        logging.error(
-            f"Volume Images list Error: No images found for volume {volume_prefix_url}: status code: {r.status_code}"
-        )
-        return {}
-    return r.json()
+    for obj_summary in archive_bucket.objects.filter(Prefix=volume_prefix_url):
+        yield Path(obj_summary.key)
 
 
 def get_volume_infos(work_prefix_url):
@@ -120,23 +115,27 @@ def get_volume_infos(work_prefix_url):
       ...
     ]
     """
-    r = requests.get(
-        f"http://purl.bdrc.io/query/table/volumesForWork?R_RES={work_prefix_url}&format=json&pageSize=400"
-    )
-    if r.status_code != 200:
-        logging.error(
-            f"Volume Info Error: No info found for Work {work_prefix_url}: status code: {r.status_code}"
-        )
-        return
-    # the result of the query is already in ascending volume order
-    res = r.json()
-    for b in res["results"]["bindings"]:
-        volume_prefix_url = NSM.qname(URIRef(b["volid"]["value"]))
-        imagegroup = volume_prefix_url[4:]
+    vol_info = defaultdict(list)
+    operation_parameters = {
+        "Bucket": ARCHIVE_BUCKET,
+        "Prefix": f"Works/fe/{work_prefix_url}/images/"
+        # "Prefix": f"scans/{work_prefix_url}/ocr-source-images",
+    }
+    page_iterator = paginator.paginate(**operation_parameters)
+    for page in page_iterator:
+        for obj_summary in page["Contents"]:
+            obj_key = obj_summary["Key"]
+            print(obj_key)
+            imagegroup = obj_key.split("/")[-2].split("-")[-1]
+            vol_info[imagegroup].append(Path(obj_key))
+            break
+        break
+
+    for imagegroup in vol_info:
         yield {
-            "vol_num": get_value(b["volnum"]),
-            "volume_prefix_url": volume_prefix_url,
+            "vol_num": 1,
             "imagegroup": imagegroup,
+            "imagelist": vol_info[imagegroup],
         }
 
 
@@ -168,13 +167,13 @@ def get_s3_prefix_path(
     return f"{base_dir}/images/{work_local_id}-{suffix}"
 
 
-def get_s3_bits(s3path, bucket):
+def get_s3_bits(s3path):
     """
     get the s3 binary data in memory
     """
     f = io.BytesIO()
     try:
-        bucket.download_fileobj(s3path, f)
+        archive_bucket.download_fileobj(s3path, f)
         return f
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "404":
@@ -234,23 +233,20 @@ def image_exists_locally(origfilename, imagegroup_output_dir):
     return False
 
 
-def save_images_for_vol(volume_prefix_url, work_local_id, imagegroup, images_base_dir):
+def save_images_for_vol(imagelist, work_local_id, imagegroup, images_base_dir):
     """
     this function gets the list of images of a volume and download all the images from s3.
     The output directory is output_base_dir/work_local_id/imagegroup
     """
-    s3prefix = get_s3_prefix_path(work_local_id, imagegroup)
-    for imageinfo in get_s3_image_list(volume_prefix_url):
-        # if DEBUG['status'] and not imageinfo['filename'].split('.')[0] == 'I1KG35630002': continue
-        imagegroup_output_dir = images_base_dir / work_local_id / imagegroup
-        if image_exists_locally(imageinfo["filename"], imagegroup_output_dir):
+    for image_path in imagelist:
+        if DEBUG["status"] and not image_path.name.split(".")[0] == "I1PD274160048":
             continue
-        s3path = s3prefix + "/" + imageinfo["filename"]
-        if DEBUG["status"]:
-            print(f'\t- downloading {imageinfo["filename"]}')
-        filebits = get_s3_bits(s3path, archive_bucket)
+        imagegroup_output_dir = images_base_dir / work_local_id / imagegroup
+        if image_exists_locally(image_path.name, imagegroup_output_dir):
+            continue
+        filebits = get_s3_bits(str(image_path))
         if filebits:
-            save_file(filebits, imageinfo["filename"], imagegroup_output_dir)
+            save_file(filebits, image_path.name, imagegroup_output_dir)
 
 
 def gzip_str(string_):
@@ -369,11 +365,13 @@ class OPFError(Exception):
 def process_work(work):
     global last_work, last_vol
 
+    if not DEBUG["status"]:
+        notifier(f"`[Work-{HOSTNAME}]` _Work {work} processing ...._")
+
     if DEBUG["status"]:
         last_work, last_vol = work, "I1KG3563"
     work_local_id, work = get_work_local_id(work)
 
-    is_work_empty = True
     is_start_work = True
     for i, vol_info in enumerate(get_volume_infos(work)):
         if (
@@ -397,7 +395,7 @@ def process_work(work):
         try:
             # save all the images for a given vol
             save_images_for_vol(
-                volume_prefix_url=vol_info["volume_prefix_url"],
+                imagelist=vol_info["imagelist"],
                 work_local_id=work_local_id,
                 imagegroup=vol_info["imagegroup"],
                 images_base_dir=IMAGES_BASE_DIR,
