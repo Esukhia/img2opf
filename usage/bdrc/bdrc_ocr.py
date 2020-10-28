@@ -103,7 +103,20 @@ def get_s3_image_list(volume_prefix_url):
         yield Path(obj_summary.key)
 
 
-def get_volume_infos(work_prefix_url):
+def get_work_prefix(work_local_id):
+    md5 = hashlib.md5(str.encode(work_local_id))
+    two = md5.hexdigest()[:2]
+    return two
+
+
+def get_volume_infos(
+    work_local_id,
+    bucket_name=ARCHIVE_BUCKET,
+    type_="images",
+    service="",
+    batch_prefix="",
+    imagegroup=None,
+):
     """
     the input is something like bdr:W22084, the output is a list like:
     [
@@ -115,10 +128,20 @@ def get_volume_infos(work_prefix_url):
       ...
     ]
     """
+    work_prefix = get_work_prefix(work_local_id)
+    s3_prefix = f"Works/{work_prefix}/{work_local_id}/"
+    if service:
+        s3_prefix += f"{service}/{batch_prefix}001/{type_}/"
+    else:
+        s3_prefix += f"{type_}/"
+
+    if imagegroup:
+        s3_prefix += f"{work_local_id}-{imagegroup}"
+
     vol_info = defaultdict(list)
     operation_parameters = {
-        "Bucket": ARCHIVE_BUCKET,
-        "Prefix": f"Works/fe/{work_prefix_url}/images/"
+        "Bucket": bucket_name,
+        "Prefix": s3_prefix,
         # "Prefix": f"scans/{work_prefix_url}/ocr-source-images",
     }
     page_iterator = paginator.paginate(**operation_parameters)
@@ -128,8 +151,6 @@ def get_volume_infos(work_prefix_url):
             print(obj_key)
             imagegroup = obj_key.split("/")[-2].split("-")[-1]
             vol_info[imagegroup].append(Path(obj_key))
-            break
-        break
 
     for imagegroup in vol_info:
         yield {
@@ -148,9 +169,7 @@ def get_s3_prefix_path(
     https://github.com/buda-base/volume-manifest-tool/blob/f8b495d908b8de66ef78665f1375f9fed13f6b9c/manifestforwork.py#L94
     which is documented
     """
-    md5 = hashlib.md5(str.encode(work_local_id))
-    two = md5.hexdigest()[:2]
-
+    two = get_work_prefix(work_local_id)
     pre, rest = imagegroup[0], imagegroup[1:]
     if pre == "I" and rest.isdigit() and len(rest) == 4:
         suffix = rest
