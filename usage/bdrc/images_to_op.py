@@ -3,10 +3,10 @@ import json
 import logging
 from pathlib import Path
 
+from ocr.google_ocr import get_text_from_image
 from openpecha.catalog import CatalogManager
 
 from bdrc_ocr import gzip_str
-from ocr.google_ocr import get_text_from_image
 
 catalog = CatalogManager(formatter_type="ocr")
 
@@ -18,13 +18,13 @@ logging.basicConfig(
 )
 
 
-def apply_ocr_on_folder(images_dir, ocr_base_dir):
-    ocr_output_dir = ocr_base_dir / images_dir.name / images_dir.name
-    ocr_output_dir.mkdir(exist_ok=True, parents=True)
-    if not images_dir.is_dir():
+def apply_ocr_on_vol(vol_dir, out_dir):
+    out_vol_dir = out_dir / vol_dir.name
+    out_vol_dir.mkdir(exist_ok=True, parents=True)
+    if not vol_dir.is_dir():
         return
-    for img_fn in images_dir.iterdir():
-        result_fn = ocr_output_dir / f"{img_fn.stem}.json.gz"
+    for img_fn in vol_dir.iterdir():
+        result_fn = out_vol_dir / f"{img_fn.stem}.json.gz"
         if result_fn.is_file():
             continue
         try:
@@ -36,18 +36,24 @@ def apply_ocr_on_folder(images_dir, ocr_base_dir):
         gzip_result = gzip_str(result)
         result_fn.write_bytes(gzip_result)
 
-    return ocr_output_dir.parent
+
+def apply_ocr_on_work(path):
+    path = Path(path)
+    out_dir = Path("./archive") / path.name
+    for vol_path in path.iterdir():
+        apply_ocr_on_vol(vol_path, out_dir)
+    return out_dir
 
 
-def images2opf(images_path):
-    ocr_output_dir = apply_ocr_on_folder(Path(images_path), Path("./archive"))
+def images2opf(work_path):
+    ocr_output_dir = apply_ocr_on_work(work_path)
     catalog.ocr_to_opf(ocr_output_dir)
     catalog.update_catalog()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Images to OpenPecha")
-    parser.add_argument("--input", "-o", help="path to images"),
+    parser.add_argument("--input", "-i", help="path to images"),
     args = parser.parse_args()
 
     images2opf(args.input)
