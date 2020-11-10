@@ -37,23 +37,24 @@ def apply_ocr_on_vol(vol_dir, out_dir):
         result_fn.write_bytes(gzip_result)
 
 
-def apply_ocr_on_work(path):
+def apply_ocr_on_work(path, base_out_dir):
     path = Path(path)
-    out_dir = Path("./archive") / path.name
+    out_dir = Path(base_out_dir) / path.name
     for vol_path in path.iterdir():
         apply_ocr_on_vol(vol_path, out_dir)
     return out_dir
 
 
-def images2opf(work_path):
-    ocr_output_dir = apply_ocr_on_work(work_path)
+def images2opf(work_path, out_dir):
+    ocr_output_dir = apply_ocr_on_work(work_path, out_dir)
     catalog.ocr_to_opf(ocr_output_dir)
     catalog.update_catalog()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Images to OpenPecha")
-    parser.add_argument("--input", "-i", help="path to images"),
+    parser.add_argument("--input", "-i", help="path to work"),
+    parser.add_argument("--output", "-o", help="path to output")
     args = parser.parse_args()
 
-    images2opf(args.input)
+    images2opf(args.input, args.output)
