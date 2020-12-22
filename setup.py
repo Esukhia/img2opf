@@ -1,9 +1,13 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+
 setup(
-    name="Esukhia-google-OCR",
+    name="img2opf",
     version="0.0.1",
     packages=find_packages(),
     install_requires=[
-        'openpecha'
+        "openpecha",
+        "google-cloud-vision==0.37.0",
+        "requests==2.22.0",
+        "boto3==1.16.41"
     ],
 )
