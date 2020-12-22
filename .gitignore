@@ -8,3 +8,10 @@ dev/
 *.egg-info/
 archive/
 credentials/
+
+*.log
+credentails/
+**/.ipynb_checkpoints/
+credentails/
+usage/bdrc/check
+usage/bdrc/input/

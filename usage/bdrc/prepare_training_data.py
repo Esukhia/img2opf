@@ -2,15 +2,9 @@ import logging
 import shutil
 from pathlib import Path
 
-from bdrc_ocr import (
-    get_s3_bits,
-    get_s3_image_list,
-    get_s3_prefix_path,
-    get_volume_infos,
-    get_work_local_id,
-    image_exists_locally,
-    save_file,
-)
+from bdrc_ocr import (get_s3_bits, get_s3_image_list, get_s3_prefix_path,
+                      get_volume_infos, get_work_local_id,
+                      image_exists_locally, save_file)
 
 logging.basicConfig(
     filename=f"{__file__}.log",
@@ -40,7 +34,7 @@ def save_images_for_vol(
         imagegroup_output_dir = images_base_dir / work_local_id / imagegroup
         # if image_exists_locally(image_path.name, imagegroup_output_dir):
         #     continue
-        filebits = get_s3_bits(str(image_path))
+        filebits = get_s3_bits(image_path.as_posix())
         if filebits:
             save_file(filebits, image_path.name, imagegroup_output_dir)
 

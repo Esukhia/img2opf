@@ -17,7 +17,6 @@ import boto3
 import botocore
 import pytz
 import rdflib
-import requests
 from github.GithubException import GithubException
 from ocr.google_ocr import get_text_from_image
 from ocr.slack_notifier import slack_notifier
@@ -26,6 +25,7 @@ from openpecha.github_utils import delete_repo
 from PIL import Image, ImageOps
 from rdflib import Literal, URIRef
 from rdflib.namespace import Namespace, NamespaceManager
+from tqdm import tqdm
 
 faulthandler.enable()
 
@@ -145,12 +145,13 @@ def get_volume_infos(
         # "Prefix": f"scans/{work_prefix_url}/ocr-source-images",
     }
     page_iterator = paginator.paginate(**operation_parameters)
-    for page in page_iterator:
+    for page in tqdm(page_iterator, desc="Preparing image download"):
         for obj_summary in page["Contents"]:
-            obj_key = obj_summary["Key"]
-            print(obj_key)
-            imagegroup = obj_key.split("/")[-2].split("-")[-1]
-            vol_info[imagegroup].append(Path(obj_key))
+            image_path = Path(obj_summary["Key"])
+            if image_path.suffix not in [".png", ".jpg", ".jepg", ".tiff"]:
+                continue
+            imagegroup = image_path.parent.name.split("-")[-1]
+            vol_info[imagegroup].append(image_path)
 
     for imagegroup in vol_info:
         yield {
@@ -392,7 +393,7 @@ def process_work(work):
     work_local_id, work = get_work_local_id(work)
 
     is_start_work = True
-    for i, vol_info in enumerate(get_volume_infos(work)):
+    for i, vol_info in enumerate(get_volume_infos(work_local_id)):
         if (
             last_work == work_local_id
             and len(vol_info["imagegroup"]) == len(last_vol)
