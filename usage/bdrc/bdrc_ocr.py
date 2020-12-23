@@ -1,3 +1,4 @@
+import argparse
 import faulthandler
 
 faulthandler.enable()
@@ -24,10 +25,11 @@ import requests
 from github.GithubException import GithubException
 # from img2opf.notifier import slack_notifier
 from img2opf.ocr import google_ocr
-from openpecha.catalog import CatalogManager
+from openpecha.catalog.manager import CatalogManager
+from openpecha.formatters import GoogleOCRFormatter
 from openpecha.github_utils import delete_repo
 from PIL import Image, ImageOps
-from rdflib import Literal, URIRef
+from rdflib import URIRef
 from rdflib.namespace import Namespace, NamespaceManager
 
 # Host config
@@ -72,7 +74,7 @@ last_vol = None
 # notifier = slack_notifier
 
 # openpecha opf setup
-catalog = CatalogManager(formatter_type="ocr")
+catalog = CatalogManager(formatter=GoogleOCRFormatter())
 
 # logging config
 logging.basicConfig(
@@ -133,8 +135,8 @@ def get_volume_infos(work_prefix_url):
         volume_prefix_url = NSM.qname(URIRef(b["volid"]["value"]))
         yield {
             "vol_num": get_value(b["volnum"]),
-            "volume_prefix_url": get_value(b["volid"]),
-            "imagegroup": get_value(b["imggroup"]),
+            "volume_prefix_url": volume_prefix_url,
+            "imagegroup": volume_prefix_url[4:],
         }
 
 
@@ -440,7 +442,7 @@ def process_work(work):
 
     if not is_work_empty:
         try:
-            catalog.ocr_to_opf(OCR_BASE_DIR / work_local_id)
+            catalog.add_ocr_item(OCR_BASE_DIR / work_local_id)
             clean_up(DATA_PATH, work_local_id=work_local_id)
             clean_up(Path("./output"))
             save_check_point(work=work_local_id)
@@ -484,16 +486,24 @@ def show_error(ex, ex_type="ocr"):
     error = f"`Here's the error: {ex}"
     if ex_type == "ocr":
         error += f"\nTraceback: {traceback.format_exc()}`"
+    logging.error(error)
     # notifier(f"`[ERROR] Error occured in {socket.gethostname()}`\n{error}")
 
 
 if __name__ == "__main__":
-    input_path = Path("Google-OCR/usage/bdrc/input")
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--input_path",
+        type=str,
+        default="./usage/bdrc/input",
+        help="path with work ids text files",
+    )
+    args = ap.parse_args()
 
     # notifier(f"`[OCR-{HOSTNAME}]` *Google OCR is running* ...")
     if CHECK_POINT_FN.is_file():
         load_check_point()
-    for workids_path in input_path.iterdir():
+    for workids_path in Path(args.input_path).iterdir():
         for i, work_id in enumerate(get_work_ids(workids_path)):
             if CHECK_POINT[WORK] and work_id in CHECK_POINT[WORK]:
                 continue
@@ -503,26 +513,26 @@ if __name__ == "__main__":
                 show_error(ex, ex_type="github")
                 error_work = catalog.batch.pop()
                 if catalog.batch:
-                    catalog.update_catalog()
+                    catalog.update()
                 if error_work:
                     delete_repo(error_work[0][1:8])
                 # slack_notifier(f"`[Restart]` *{HOSTNAME}* ...")
                 os.execv(f'{shutil.which("nohup")}', ["nohup", "sh", "run.sh", "&"])
             except OPFError:
                 if catalog.batch:
-                    catalog.update_catalog()
+                    catalog.update()
                 # slack_notifier(f"`[Restart]` *{HOSTNAME}* ...")
                 os.execv(f'{shutil.which("nohup")}', ["nohup", "sh", "run.sh", "&"])
             except Exception as ex:
                 show_error(ex)
                 if catalog.batch:
-                    catalog.update_catalog()
+                    catalog.update()
                 sys.exit()
 
             # update catalog every after 5 pecha
             if len(catalog.batch) == 5:
-                catalog.update_catalog()
+                catalog.update()
 
         # notifier(f"[INFO] Completed {workids_path.name}")
 
-    catalog.update_catalog()
+    catalog.update()
