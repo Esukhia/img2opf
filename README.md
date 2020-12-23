@@ -3,7 +3,7 @@
 ### Setup with pip & virtualenv
 Clone this repo and follow the steps below
 ```
-cd Google-OCR
+cd img2opf
 virtualenv .env
 source .env/bin/activate
 pip install -r requirements.txt
@@ -14,7 +14,7 @@ Follow this [Quick Start](https://pypi.org/project/google-cloud-vision/) guide t
 ## Usage
 Running OCR on collection of images. Note: Google OCR doesn't support `.tif` images. 
 ```
-usage: google_ocr.py [-h] [--input_dir INPUT_DIR] [--n N]
+usage: img2opf/ocr.py [-h] [--input_dir INPUT_DIR] [--n N]
                      [--output_dir OUTPUT_DIR] [--combine_output]
 
 optional arguments:
@@ -65,7 +65,7 @@ Output:
 
 3. To combine output of all images, run following command:
 ```
-python ocr/google_ocr.py --input_dir ./my_images --output_dir output` --combine
+python img2opf/ocr.py --input_dir ./my_images --output_dir output` --combine
 ```
 
 Output:
