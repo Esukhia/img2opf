@@ -88,6 +88,10 @@ logging.basicConfig(
 DEBUG = {"status": False}
 
 
+def notifier(msg):
+    logging.info(msg)
+
+
 def get_value(json_node):
     if json_node["type"] == "literal":
         return json_node["value"]
@@ -387,13 +391,13 @@ def process_work(work):
 
         # log work info at 1st vol
         if is_start_work and not DEBUG["status"]:
-            # notifier(f"`[Work-{HOSTNAME}]` _Work {work} processing ...._")
+            notifier(f"`[Work-{HOSTNAME}]` _Work {work} processing ...._")
             is_start_work = False
 
-        # if not DEBUG["status"]:
-        #     notifier(
-        #         f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....'
-        #     )
+        if not DEBUG["status"]:
+            notifier(
+                f'* `[Volume-{HOSTNAME}]` {vol_info["imagegroup"]} processing ....'
+            )
         try:
             # save all the images for a given vol
             save_images_for_vol(
@@ -500,7 +504,7 @@ if __name__ == "__main__":
     )
     args = ap.parse_args()
 
-    # notifier(f"`[OCR-{HOSTNAME}]` *Google OCR is running* ...")
+    notifier(f"`[OCR-{HOSTNAME}]` *Google OCR is running* ...")
     if CHECK_POINT_FN.is_file():
         load_check_point()
     for workids_path in Path(args.input_path).iterdir():
@@ -533,6 +537,6 @@ if __name__ == "__main__":
             if len(catalog.batch) == 5:
                 catalog.update()
 
-        # notifier(f"[INFO] Completed {workids_path.name}")
+        notifier(f"[INFO] Completed {workids_path.name}")
 
     catalog.update()
