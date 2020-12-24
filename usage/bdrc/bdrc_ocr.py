@@ -23,6 +23,7 @@ import pytz
 import rdflib
 import requests
 from github.GithubException import GithubException
+
 # from img2opf.notifier import slack_notifier
 from img2opf.ocr import google_ocr
 from openpecha.catalog.manager import CatalogManager
@@ -196,7 +197,7 @@ def save_file(bits, origfilename, imagegroup_output_dir):
     """
     imagegroup_output_dir.mkdir(exist_ok=True, parents=True)
     output_fn = imagegroup_output_dir / origfilename
-    if origfilename.endswith(".tif"):
+    if origfilename.suffix in [".tif", ".tiff", ".TIF"]:
         output_fn = imagegroup_output_dir / f'{origfilename.split(".")[0]}.png'
     if output_fn.is_file():
         return
