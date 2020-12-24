@@ -197,7 +197,7 @@ def save_file(bits, origfilename, imagegroup_output_dir):
     """
     imagegroup_output_dir.mkdir(exist_ok=True, parents=True)
     output_fn = imagegroup_output_dir / origfilename
-    if origfilename.suffix in [".tif", ".tiff", ".TIF"]:
+    if Path(origfilename).suffix in [".tif", ".tiff", ".TIF"]:
         output_fn = imagegroup_output_dir / f'{origfilename.split(".")[0]}.png'
     if output_fn.is_file():
         return

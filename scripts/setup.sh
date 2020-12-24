@@ -4,8 +4,8 @@ sudo apt -y install python3-pip
 sudo apt -y install moreutils
 
 # install Google-OCR
-if [ -d Google-OCR ]; then
-  cd Google-OCR;
+if [ -d ~/ocr/img2opf ]; then
+  cd ~/ocr/img2opf;
   git pull;
   cd ..;
 else
