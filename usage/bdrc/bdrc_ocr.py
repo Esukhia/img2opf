@@ -23,15 +23,16 @@ import pytz
 import rdflib
 import requests
 from github.GithubException import GithubException
-
 # from img2opf.notifier import slack_notifier
 from img2opf.ocr import google_ocr
 from openpecha.catalog.manager import CatalogManager
 from openpecha.formatters import GoogleOCRFormatter
 from openpecha.github_utils import delete_repo
-from PIL import Image, ImageOps
+from PIL import Image as PillowImage
+from PIL import ImageOps
 from rdflib import URIRef
 from rdflib.namespace import Namespace, NamespaceManager
+from wand.image import Image as WandImage
 
 # Host config
 HOSTNAME = socket.gethostname()
@@ -188,6 +189,17 @@ def get_s3_bits(s3path, bucket):
             raise
     return
 
+def save_with_wand(bits, output_fn):
+    try:
+        with WandImage(blob=bits.getvalue()) as img:
+            img.format = "png"
+            img.save(filename=str(output_fn))
+    except Exception as e:
+        logging.error(
+            f"Error in saving: {output_fn} : origfilename: {output_fn.name}"
+        )
+        logging.error(e)
+
 
 def save_file(bits, origfilename, imagegroup_output_dir):
     """
@@ -202,21 +214,22 @@ def save_file(bits, origfilename, imagegroup_output_dir):
     if output_fn.is_file():
         return
     try:
-        img = Image.open(bits)
+        img = PillowImage.open(bits)
         if len(img.size) > 2:
             img = ImageOps.autocontrast(img, cutoff=0.5)
-    except:
-        if not bits.getvalue():
-            logging.error(f"Empty bytes: {output_fn}")
+    except Exception as e:
+        if bits.getvalue():
+            save_with_wand(bits, output_fn)
         else:
-            logging.error(f"Pillow issue: {output_fn}")
+            logging.error(f"Empty image: {output_fn}")
+            logging.error(e)
         return
 
     try:
         img.save(str(output_fn))
     except:
-        logging.error(f"Error in saving: {output_fn} : origfilename: {origfilename}")
-        return
+        del img
+        save_with_wand(bits, output_fn)
 
 
 def image_exists_locally(origfilename, imagegroup_output_dir):
