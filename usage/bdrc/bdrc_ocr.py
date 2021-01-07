@@ -553,4 +553,5 @@ if __name__ == "__main__":
 
         notifier(f"[INFO] Completed {workids_path.name}")
 
-    catalog.update()
+    if catalog.batch:
+        catalog.update()
