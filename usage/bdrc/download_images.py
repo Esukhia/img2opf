@@ -22,8 +22,8 @@ logging.basicConfig(
 
 
 def process(args):
-    work_local_id, _ = get_work_local_id(args.work)
-    for vol_info in get_volume_infos(work_local_id):
+    work_local_id, work = get_work_local_id(args.work)
+    for vol_info in get_volume_infos(work):
         imagegroup = vol_info["imagegroup"]
         if imagegroup > args.end:
             break
@@ -31,18 +31,21 @@ def process(args):
             continue
         if imagegroup in args.skip:
             continue
-        print(f"[INFO] Processing {imagegroup} ....")
+        print(f"[INFO] Downloading {imagegroup} images ....")
         save_images_for_vol(
-            imagelist=vol_info["imagelist"],
+            volume_prefix_url=vol_info["volume_prefix_url"],
             work_local_id=work_local_id,
             imagegroup=imagegroup,
-            images_base_dir=Path("archive/images/missing-imagegroups"),
+            images_base_dir=Path(args.output_dir),
         )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("work")
+    parser.add_argument(
+        "--output_dir", "-o", default="./archive/images", help="start imagegroup"
+    )
     parser.add_argument("--start", "-s", default=chr(0), help="start imagegroup")
     parser.add_argument(
         "--end", "-e", default=chr(sys.maxunicode), help="end imagegroup"
