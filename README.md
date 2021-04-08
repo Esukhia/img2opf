@@ -74,4 +74,11 @@ Output:
     my_images.txt
 ```
 
+### Environment Requirements
+  - to run the script it must support Wand 0.6.6. The previous version of this script only used Pillow for image processing but we had to add wand to solve some      major issues. We currently run the script locally on a MacBook. Please note that Wand isn't compatible with all version of linux. 
+
+
+
 Note: If you have any issue with using the script or any feature that you would like to suggest please feel free to create an [issue](https://github.com/Esukhia/Google-OCR/issues) on that.
+
+
