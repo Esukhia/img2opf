@@ -4,10 +4,19 @@ import sys
 from pathlib import Path
 from typing import Mapping
 
-from bdrc_ocr import (BATCH_PREFIX, IMAGES, OCR_BASE_DIR, OUTPUT, SERVICE,
-                      get_s3_bits, get_s3_image_list, get_s3_prefix_path,
-                      get_volume_infos, get_work_local_id, ocr_output_bucket,
-                      save_file)
+from bdrc_ocr import (
+    BATCH_PREFIX,
+    IMAGES,
+    OUTPUT,
+    SERVICE,
+    get_s3_bits,
+    get_s3_image_list,
+    get_s3_prefix_path,
+    get_volume_infos,
+    get_work_local_id,
+    ocr_output_bucket,
+    save_file,
+)
 
 logging.basicConfig(
     filename=f"{__file__}.log",
@@ -49,6 +58,13 @@ def download_ocr_result_for_vol(
 def process(args):
     work_local_id, work = get_work_local_id(args.work)
     for vol_info in get_volume_infos(work):
+        imagegroup = vol_info["imagegroup"]
+        if imagegroup > args.end:
+            break
+        if imagegroup < args.start:
+            continue
+        if imagegroup in args.skip:
+            continue
         print(f"[INFO] Processing {vol_info['imagegroup']} ....")
 
         s3_ocr_paths = get_s3_prefix_path(
@@ -63,7 +79,7 @@ def process(args):
             volume_prefix_url=vol_info["volume_prefix_url"],
             work_local_id=work_local_id,
             imagegroup=vol_info["imagegroup"],
-            output_base_dir=OCR_BASE_DIR,
+            output_base_dir=Path(args.output_dir),
             s3_ocr_paths=s3_ocr_paths,
         )
 
@@ -71,5 +87,15 @@ def process(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("work")
+    parser.add_argument(
+        "--output_dir", "-o", default="./archive/output", help="start imagegroup"
+    )
+    parser.add_argument("--start", "-s", default=chr(0), help="start imagegroup")
+    parser.add_argument(
+        "--end", "-e", default=chr(sys.maxunicode), help="end imagegroup"
+    )
+    parser.add_argument(
+        "--skip", "-sk", default="", help="imagegroups to be skiped (in comma seperated"
+    )
     args = parser.parse_args()
     process(args)
